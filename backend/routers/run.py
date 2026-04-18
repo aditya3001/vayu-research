@@ -24,9 +24,9 @@ class RunRequest(BaseModel):
 def _call_llm(provider: str, model: str, content: str, db: Session) -> str:
     if provider == "openai":
         from openai import OpenAI
-        api_key = get_setting(db, "openai_api_key")
+        api_key = os.environ.get("OPENAI_API_KEY") or get_setting(db, "openai_api_key")
         if not api_key:
-            raise HTTPException(status_code=500, detail="OpenAI API key not set. Add it in Settings.")
+            raise HTTPException(status_code=500, detail="OpenAI API key not set. Add OPENAI_API_KEY to .env or enter it in Settings.")
         client = OpenAI(api_key=api_key)
         response = client.chat.completions.create(
             model=model,

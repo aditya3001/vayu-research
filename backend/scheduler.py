@@ -36,7 +36,7 @@ def _run_scheduled_job(schedule_id: int):
 
         if provider == "openai":
             from openai import OpenAI
-            api_key = get_setting(db, "openai_api_key")
+            api_key = os.environ.get("OPENAI_API_KEY") or get_setting(db, "openai_api_key")
             if not api_key:
                 logger.error(f"OpenAI API key not set for schedule {schedule_id}")
                 return
