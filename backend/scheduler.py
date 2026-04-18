@@ -1,6 +1,6 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-import anthropic, os, json, logging
+import os, json, logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -30,14 +30,33 @@ def _run_scheduled_job(schedule_id: int):
         for key, val in inputs.items():
             filled = filled.replace(f"[{key}]", val)
 
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        client = anthropic.Anthropic(api_key=api_key)
-        message = client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=4096,
-            messages=[{"role": "user", "content": filled}]
-        )
-        result = message.content[0].text
+        provider = schedule.provider or "anthropic"
+        DEFAULTS = {"anthropic": "claude-opus-4-6", "openai": "gpt-4o"}
+        model = schedule.model_name or DEFAULTS.get(provider, "claude-opus-4-6")
+
+        if provider == "openai":
+            from openai import OpenAI
+            api_key = get_setting(db, "openai_api_key")
+            if not api_key:
+                logger.error(f"OpenAI API key not set for schedule {schedule_id}")
+                return
+            oai = OpenAI(api_key=api_key)
+            response = oai.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": filled}],
+                max_tokens=4096
+            )
+            result = response.choices[0].message.content
+        else:
+            import anthropic
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            client = anthropic.Anthropic(api_key=api_key)
+            message = client.messages.create(
+                model=model,
+                max_tokens=4096,
+                messages=[{"role": "user", "content": filled}]
+            )
+            result = message.content[0].text
 
         entry = History(
             prompt_id=schedule.prompt_id,

@@ -14,3 +14,17 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def run_migrations():
+    """Add columns that may be missing from an existing schema."""
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        for col, definition in [
+            ("provider", "VARCHAR DEFAULT 'anthropic'"),
+            ("model_name", "VARCHAR"),
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE schedules ADD COLUMN {col} {definition}"))
+                conn.commit()
+            except Exception:
+                pass  # column already exists

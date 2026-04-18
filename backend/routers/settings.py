@@ -14,6 +14,7 @@ class SettingsPayload(BaseModel):
     gmail_app_password: Optional[str] = None
     telegram_bot_token: Optional[str] = None
     telegram_chat_id: Optional[str] = None
+    openai_api_key: Optional[str] = None
 
 @router.get("/settings")
 def get_settings(db: Session = Depends(get_db)):
@@ -22,7 +23,8 @@ def get_settings(db: Session = Depends(get_db)):
         "gmail_address": rows.get("gmail_address", ""),
         "gmail_app_password": "***" if rows.get("gmail_app_password") else "",
         "telegram_bot_token": "***" if rows.get("telegram_bot_token") else "",
-        "telegram_chat_id": rows.get("telegram_chat_id", "")
+        "telegram_chat_id": rows.get("telegram_chat_id", ""),
+        "openai_api_key": "***" if rows.get("openai_api_key") else "",
     }
 
 @router.put("/settings")

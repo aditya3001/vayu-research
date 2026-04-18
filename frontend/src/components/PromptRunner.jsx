@@ -3,14 +3,34 @@ import { useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { getPrompt, runPrompt } from '../api'
 
+const MODELS = {
+  anthropic: [
+    { value: 'claude-opus-4-6', label: 'Claude Opus 4.6 (Best)' },
+    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (Fast)' },
+    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (Cheapest)' },
+  ],
+  openai: [
+    { value: 'gpt-4o', label: 'GPT-4o (Best)' },
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Fast)' },
+    { value: 'o1-mini', label: 'o1 Mini (Reasoning)' },
+  ],
+}
+
 export default function PromptRunner() {
   const { promptId } = useParams()
   const [prompt, setPrompt] = useState(null)
   const [inputs, setInputs] = useState({})
+  const [provider, setProvider] = useState('anthropic')
+  const [model, setModel] = useState('claude-opus-4-6')
   const [result, setResult] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showTip, setShowTip] = useState(false)
+
+  const handleProviderChange = (p) => {
+    setProvider(p)
+    setModel(MODELS[p][0].value)
+  }
 
   useEffect(() => {
     getPrompt(promptId).then(p => {
@@ -27,7 +47,7 @@ export default function PromptRunner() {
     setError('')
     setResult('')
     try {
-      const data = await runPrompt(promptId, inputs)
+      const data = await runPrompt(promptId, inputs, provider, model)
       setResult(data.result)
     } catch (e) {
       setError(e.response?.data?.detail || 'Something went wrong')
@@ -88,6 +108,29 @@ export default function PromptRunner() {
               />
             </div>
           ))}
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '14px' }}>
+          <div>
+            <label style={{ display: 'block', color: '#888', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Provider</label>
+            <select
+              value={provider}
+              onChange={e => handleProviderChange(e.target.value)}
+              style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="anthropic">Anthropic</option>
+              <option value="openai">OpenAI</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', color: '#888', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Model</label>
+            <select
+              value={model}
+              onChange={e => setModel(e.target.value)}
+              style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none', cursor: 'pointer', minWidth: '220px' }}
+            >
+              {MODELS[provider].map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+          </div>
         </div>
         <button
           onClick={handleRun}

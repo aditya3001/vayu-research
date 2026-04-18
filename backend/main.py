@@ -4,9 +4,10 @@ from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 import os
 
-from database import engine
+from database import engine, run_migrations
 import models
 models.Base.metadata.create_all(bind=engine)
+run_migrations()
 
 from scheduler import start_scheduler
 

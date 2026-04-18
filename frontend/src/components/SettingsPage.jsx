@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getSettings, updateSettings } from '../api'
 
 export default function SettingsPage() {
-  const [form, setForm] = useState({ gmail_address: '', gmail_app_password: '', telegram_bot_token: '', telegram_chat_id: '' })
+  const [form, setForm] = useState({ gmail_address: '', gmail_app_password: '', telegram_bot_token: '', telegram_chat_id: '', openai_api_key: '' })
   const [saved, setSaved] = useState(false)
 
   useEffect(() => { getSettings().then(setForm) }, [])
@@ -29,6 +29,14 @@ export default function SettingsPage() {
   return (
     <div style={{ padding: '24px', maxWidth: '500px' }}>
       <h1 style={{ color: '#fff', fontSize: '20px', marginBottom: '24px' }}>Settings</h1>
+
+      <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '6px', padding: '20px', marginBottom: '16px' }}>
+        <h3 style={{ color: '#c9a96e', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px', marginTop: 0 }}>OpenAI</h3>
+        {field('openai_api_key', 'API Key', 'sk-...', 'password')}
+        <p style={{ color: '#444', fontSize: '11px', margin: 0 }}>
+          Get your key at platform.openai.com → API Keys. Required to use GPT-4o and other OpenAI models.
+        </p>
+      </div>
 
       <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '6px', padding: '20px', marginBottom: '16px' }}>
         <h3 style={{ color: '#c9a96e', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px', marginTop: 0 }}>Gmail (Email Delivery)</h3>

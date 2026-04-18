@@ -21,6 +21,8 @@ class Schedule(Base):
     frequency = Column(String, nullable=False)  # "daily" | "weekdays" | "weekly"
     day_of_week = Column(String, nullable=True)  # "monday" etc, only for weekly
     run_time = Column(String, nullable=False)    # "08:00"
+    provider = Column(String, default="anthropic")   # "anthropic" | "openai"
+    model_name = Column(String, nullable=True)         # None = use provider default
     notify_email = Column(Boolean, default=False)
     notify_telegram = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)

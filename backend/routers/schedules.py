@@ -16,6 +16,8 @@ class ScheduleCreate(BaseModel):
     frequency: str  # daily | weekdays | weekly
     day_of_week: Optional[str] = None
     run_time: str   # "08:00"
+    provider: str = "anthropic"
+    model_name: Optional[str] = None
     notify_email: bool = False
     notify_telegram: bool = False
 
@@ -24,6 +26,8 @@ class ScheduleUpdate(BaseModel):
     frequency: Optional[str] = None
     day_of_week: Optional[str] = None
     run_time: Optional[str] = None
+    provider: Optional[str] = None
+    model_name: Optional[str] = None
     notify_email: Optional[bool] = None
     notify_telegram: Optional[bool] = None
 
@@ -36,6 +40,8 @@ def _serialize(s: Schedule) -> dict:
         "frequency": s.frequency,
         "day_of_week": s.day_of_week,
         "run_time": s.run_time,
+        "provider": s.provider or "anthropic",
+        "model_name": s.model_name,
         "notify_email": s.notify_email,
         "notify_telegram": s.notify_telegram,
         "is_active": s.is_active,
@@ -57,6 +63,8 @@ def create_schedule(payload: ScheduleCreate, db: Session = Depends(get_db)):
         frequency=payload.frequency,
         day_of_week=payload.day_of_week,
         run_time=payload.run_time,
+        provider=payload.provider,
+        model_name=payload.model_name,
         notify_email=payload.notify_email,
         notify_telegram=payload.notify_telegram,
         is_active=True
