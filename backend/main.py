@@ -1,14 +1,21 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from contextlib import asynccontextmanager
 import os
 
 from database import engine
 import models
-
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Vayu Research")
+from scheduler import start_scheduler
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_scheduler()
+    yield
+
+app = FastAPI(title="Vayu Research", lifespan=lifespan)
 
 from routers import prompts, run, history, schedules, settings
 app.include_router(prompts.router, prefix="/api")
