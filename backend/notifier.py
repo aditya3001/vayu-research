@@ -67,27 +67,101 @@ def test_notion_connection(token: str, page_id: str) -> dict:
     except Exception as e:
         return {"ok": False, "error": f"Could not reach Notion API: {e}"}
 
+def _rich_text(text: str) -> list:
+    """Parse inline markdown (bold, italic, inline code) into Notion rich_text array."""
+    import re
+    result = []
+    # Pattern matches **bold**, *italic*, `code` in order
+    pattern = re.compile(r'(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)')
+    last = 0
+    for m in pattern.finditer(text):
+        if m.start() > last:
+            result.append({"type": "text", "text": {"content": text[last:m.start()]}})
+        raw = m.group(0)
+        if raw.startswith("**"):
+            result.append({"type": "text", "text": {"content": m.group(2)}, "annotations": {"bold": True}})
+        elif raw.startswith("*"):
+            result.append({"type": "text", "text": {"content": m.group(3)}, "annotations": {"italic": True}})
+        else:
+            result.append({"type": "text", "text": {"content": m.group(4)}, "annotations": {"code": True}})
+        last = m.end()
+    if last < len(text):
+        result.append({"type": "text", "text": {"content": text[last:]}})
+    return result or [{"type": "text", "text": {"content": text}}]
+
+def _md_to_notion_blocks(content: str) -> list:
+    """Convert markdown text to Notion block objects."""
+    import re
+    blocks = []
+    lines = content.split("\n")
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
+        # Fenced code block
+        if line.strip().startswith("```"):
+            lang = line.strip()[3:].strip() or "plain text"
+            code_lines = []
+            i += 1
+            while i < len(lines) and not lines[i].strip().startswith("```"):
+                code_lines.append(lines[i])
+                i += 1
+            blocks.append({
+                "object": "block", "type": "code",
+                "code": {"rich_text": [{"type": "text", "text": {"content": "\n".join(code_lines)[:2000]}}], "language": lang}
+            })
+            i += 1
+            continue
+
+        # Headings
+        if line.startswith("### "):
+            blocks.append({"object": "block", "type": "heading_3", "heading_3": {"rich_text": _rich_text(line[4:])}})
+        elif line.startswith("## "):
+            blocks.append({"object": "block", "type": "heading_2", "heading_2": {"rich_text": _rich_text(line[3:])}})
+        elif line.startswith("# "):
+            blocks.append({"object": "block", "type": "heading_1", "heading_1": {"rich_text": _rich_text(line[2:])}})
+
+        # Blockquote
+        elif line.startswith("> "):
+            blocks.append({"object": "block", "type": "quote", "quote": {"rich_text": _rich_text(line[2:])}})
+
+        # Horizontal rule
+        elif re.match(r'^[-*_]{3,}$', line.strip()):
+            blocks.append({"object": "block", "type": "divider", "divider": {}})
+
+        # Bullet list
+        elif re.match(r'^[-*+] ', line):
+            blocks.append({"object": "block", "type": "bulleted_list_item", "bulleted_list_item": {"rich_text": _rich_text(line[2:])}})
+
+        # Numbered list
+        elif re.match(r'^\d+\. ', line):
+            text = re.sub(r'^\d+\. ', '', line)
+            blocks.append({"object": "block", "type": "numbered_list_item", "numbered_list_item": {"rich_text": _rich_text(text)}})
+
+        # Empty line — skip
+        elif not line.strip():
+            pass
+
+        # Paragraph
+        else:
+            blocks.append({"object": "block", "type": "paragraph", "paragraph": {"rich_text": _rich_text(line)}})
+
+        i += 1
+    return blocks
+
 def send_notion(token: str, page_id: str, title: str, content: str) -> tuple[bool, str]:
     """Returns (success, error_message). error_message is empty on success."""
     try:
         pid = _normalize_page_id(page_id)
         headers = _notion_headers(token)
-        MAX_BLOCK = 1900
-        children = [{
-            "object": "block",
-            "type": "heading_2",
-            "heading_2": {"rich_text": [{"type": "text", "text": {"content": title[:2000]}}]}
-        }]
-        for line in content.split("\n"):
-            if not line.strip():
-                continue
-            for i in range(0, max(1, len(line)), MAX_BLOCK):
-                chunk = line[i:i+MAX_BLOCK]
-                children.append({
-                    "object": "block",
-                    "type": "paragraph",
-                    "paragraph": {"rich_text": [{"type": "text", "text": {"content": chunk}}]}
-                })
+
+        children = [
+            {"object": "block", "type": "heading_2", "heading_2": {"rich_text": [{"type": "text", "text": {"content": title[:2000]}}]}},
+            {"object": "block", "type": "divider", "divider": {}},
+            *_md_to_notion_blocks(content),
+            {"object": "block", "type": "divider", "divider": {}},
+        ]
+
         BATCH = 100
         url = f"https://api.notion.com/v1/blocks/{pid}/children"
         for i in range(0, len(children), BATCH):
