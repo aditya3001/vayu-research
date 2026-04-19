@@ -36,9 +36,9 @@ def _call_llm(provider: str, model: str, content: str, db: Session) -> str:
         return response.choices[0].message.content
     else:  # anthropic
         import anthropic
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        api_key = os.environ.get("ANTHROPIC_API_KEY") or get_setting(db, "anthropic_api_key")
         if not api_key:
-            raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not set")
+            raise HTTPException(status_code=500, detail="Anthropic API key not set. Add ANTHROPIC_API_KEY to .env or enter it in Settings.")
         client = anthropic.Anthropic(api_key=api_key)
         message = client.messages.create(
             model=model,
@@ -58,8 +58,8 @@ def run_prompt(req: RunRequest, db: Session = Depends(get_db)):
     for key, val in req.inputs.items():
         filled = filled.replace(f"[{key}]", val)
 
-    provider = req.provider or "anthropic"
-    model = req.model or PROVIDER_DEFAULTS.get(provider, "claude-opus-4-6")
+    provider = req.provider or get_setting(db, "default_provider") or "anthropic"
+    model = req.model or get_setting(db, "default_model") or PROVIDER_DEFAULTS.get(provider, "claude-opus-4-6")
 
     result = _call_llm(provider, model, filled, db)
 

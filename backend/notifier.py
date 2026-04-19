@@ -30,3 +30,38 @@ def send_telegram(bot_token: str, chat_id: str, text: str):
         logger.info(f"Telegram sent ({len(chunks)} chunks)")
     except Exception as e:
         logger.error(f"Telegram failed: {e}")
+
+def send_notion(token: str, page_id: str, title: str, content: str) -> bool:
+    try:
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Notion-Version": "2022-06-28",
+        }
+        MAX_BLOCK = 1900
+        children = [{
+            "object": "block",
+            "type": "heading_2",
+            "heading_2": {"rich_text": [{"type": "text", "text": {"content": title[:2000]}}]}
+        }]
+        for line in content.split("\n"):
+            if not line.strip():
+                continue
+            for i in range(0, max(1, len(line)), MAX_BLOCK):
+                chunk = line[i:i+MAX_BLOCK]
+                children.append({
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {"rich_text": [{"type": "text", "text": {"content": chunk}}]}
+                })
+        # Notion limits 100 children per request — batch if needed
+        BATCH = 100
+        url = f"https://api.notion.com/v1/blocks/{page_id}/children"
+        for i in range(0, len(children), BATCH):
+            resp = requests.patch(url, headers=headers, json={"children": children[i:i+BATCH]}, timeout=15)
+            resp.raise_for_status()
+        logger.info(f"Notion saved: {title}")
+        return True
+    except Exception as e:
+        logger.error(f"Notion failed: {e}")
+        return False

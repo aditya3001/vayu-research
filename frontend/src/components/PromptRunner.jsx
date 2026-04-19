@@ -1,36 +1,37 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
-import { getPrompt, runPrompt } from '../api'
+import { getPrompt, runPrompt, saveToNotion } from '../api'
 
-const MODELS = {
-  anthropic: [
-    { value: 'claude-opus-4-6', label: 'Claude Opus 4.6 (Best)' },
-    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (Fast)' },
-    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (Cheapest)' },
-  ],
-  openai: [
-    { value: 'gpt-4o', label: 'GPT-4o (Best)' },
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Fast)' },
-    { value: 'o1-mini', label: 'o1 Mini (Reasoning)' },
-  ],
+function PromptTextView({ text }) {
+  // Render prompt text with [PLACEHOLDER] highlighted
+  const parts = text.split(/(\[[^\]]+\])/g)
+  return (
+    <pre style={{
+      whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+      color: '#999', fontSize: '12px', lineHeight: '1.7',
+      margin: 0, fontFamily: 'inherit'
+    }}>
+      {parts.map((part, i) =>
+        /^\[[^\]]+\]$/.test(part)
+          ? <mark key={i} style={{ background: 'rgba(201,169,110,0.2)', color: '#c9a96e', borderRadius: '3px', padding: '0 2px' }}>{part}</mark>
+          : <span key={i}>{part}</span>
+      )}
+    </pre>
+  )
 }
 
 export default function PromptRunner() {
   const { promptId } = useParams()
   const [prompt, setPrompt] = useState(null)
   const [inputs, setInputs] = useState({})
-  const [provider, setProvider] = useState('anthropic')
-  const [model, setModel] = useState('claude-opus-4-6')
   const [result, setResult] = useState('')
+  const [historyId, setHistoryId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showTip, setShowTip] = useState(false)
-
-  const handleProviderChange = (p) => {
-    setProvider(p)
-    setModel(MODELS[p][0].value)
-  }
+  const [showPromptText, setShowPromptText] = useState(false)
+  const [notionStatus, setNotionStatus] = useState('')
 
   useEffect(() => {
     getPrompt(promptId).then(p => {
@@ -39,6 +40,8 @@ export default function PromptRunner() {
       ;(p.placeholders || []).forEach(k => { defaults[k] = '' })
       setInputs(defaults)
       setResult('')
+      setHistoryId(null)
+      setNotionStatus('')
     })
   }, [promptId])
 
@@ -46,9 +49,12 @@ export default function PromptRunner() {
     setLoading(true)
     setError('')
     setResult('')
+    setHistoryId(null)
+    setNotionStatus('')
     try {
-      const data = await runPrompt(promptId, inputs, provider, model)
+      const data = await runPrompt(promptId, inputs)
       setResult(data.result)
+      setHistoryId(data.history_id)
     } catch (e) {
       setError(e.response?.data?.detail || 'Something went wrong')
     } finally {
@@ -68,19 +74,48 @@ export default function PromptRunner() {
     URL.revokeObjectURL(url)
   }
 
+  const handleSaveToNotion = async () => {
+    if (!historyId) return
+    setNotionStatus('saving')
+    try {
+      await saveToNotion(historyId)
+      setNotionStatus('saved')
+    } catch (e) {
+      setNotionStatus(e.response?.data?.detail || 'Notion save failed')
+    }
+  }
+
   if (!prompt) return <div style={{ padding: '24px', color: '#555' }}>Loading...</div>
 
   return (
     <div style={{ padding: '24px', maxWidth: '860px' }}>
       <div style={{ marginBottom: '20px' }}>
         <h1 style={{ color: '#fff', fontSize: '20px', margin: '0 0 4px' }}>{prompt.name}</h1>
-        <p style={{ color: '#666', fontSize: '13px', margin: '0 0 8px' }}>{prompt.description}</p>
-        <button
-          onClick={() => setShowTip(!showTip)}
-          style={{ background: 'none', border: '1px solid #333', color: '#888', padding: '3px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}
-        >
-          {showTip ? '▲' : '▼'} Pro Tip
-        </button>
+        <p style={{ color: '#666', fontSize: '13px', margin: '0 0 10px' }}>{prompt.description}</p>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => setShowPromptText(!showPromptText)}
+            style={{ background: 'none', border: '1px solid #333', color: '#888', padding: '3px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}
+          >
+            {showPromptText ? '▲ Hide Prompt' : '▼ View Prompt'}
+          </button>
+          <button
+            onClick={() => setShowTip(!showTip)}
+            style={{ background: 'none', border: '1px solid #333', color: '#888', padding: '3px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}
+          >
+            {showTip ? '▲' : '▼'} Pro Tip
+          </button>
+        </div>
+
+        {showPromptText && (
+          <div style={{ background: '#0a0a0a', border: '1px solid #1e1e1e', borderRadius: '4px', padding: '14px', marginTop: '10px', maxHeight: '320px', overflowY: 'auto' }}>
+            <div style={{ color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>
+              Full Prompt — <span style={{ color: '#c9a96e' }}>highlighted</span> = placeholder fields
+            </div>
+            <PromptTextView text={prompt.prompt_text} />
+          </div>
+        )}
+
         {showTip && (
           <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '4px', padding: '10px', marginTop: '8px', color: '#c9a96e', fontSize: '12px' }}>
             {prompt.pro_tip}
@@ -109,29 +144,6 @@ export default function PromptRunner() {
             </div>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '14px' }}>
-          <div>
-            <label style={{ display: 'block', color: '#888', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Provider</label>
-            <select
-              value={provider}
-              onChange={e => handleProviderChange(e.target.value)}
-              style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
-            >
-              <option value="anthropic">Anthropic</option>
-              <option value="openai">OpenAI</option>
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', color: '#888', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Model</label>
-            <select
-              value={model}
-              onChange={e => setModel(e.target.value)}
-              style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none', cursor: 'pointer', minWidth: '220px' }}
-            >
-              {MODELS[provider].map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-            </select>
-          </div>
-        </div>
         <button
           onClick={handleRun}
           disabled={loading}
@@ -157,7 +169,18 @@ export default function PromptRunner() {
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span style={{ color: '#888', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>Result</span>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {notionStatus === 'saved' && <span style={{ color: '#4caf50', fontSize: '11px' }}>✓ Saved to Notion</span>}
+              {notionStatus && notionStatus !== 'saved' && notionStatus !== 'saving' && (
+                <span style={{ color: '#ff6b6b', fontSize: '11px' }}>{notionStatus}</span>
+              )}
+              <button
+                onClick={handleSaveToNotion}
+                disabled={notionStatus === 'saving' || notionStatus === 'saved'}
+                style={{ ...btnStyle, color: notionStatus === 'saved' ? '#4caf50' : '#888' }}
+              >
+                {notionStatus === 'saving' ? '...' : notionStatus === 'saved' ? '✓ Notion' : 'N Notion'}
+              </button>
               <button onClick={handleDownload} style={btnStyle}>⬇ Download .md</button>
               <button onClick={handleCopy} style={btnStyle}>📋 Copy</button>
             </div>

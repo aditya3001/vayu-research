@@ -4,8 +4,9 @@ const api = axios.create({ baseURL: '/api' })
 
 export const getPrompts = () => api.get('/prompts').then(r => r.data)
 export const getPrompt = (id) => api.get(`/prompts/${id}`).then(r => r.data)
-export const runPrompt = (prompt_id, inputs, provider, model) =>
-  api.post('/run', { prompt_id, inputs, provider, model }).then(r => r.data)
+export const runPrompt = (prompt_id, inputs) =>
+  api.post('/run', { prompt_id, inputs }).then(r => r.data)
+export const saveToNotion = (id) => api.post(`/history/${id}/notion`).then(r => r.data)
 export const getHistory = () => api.get('/history').then(r => r.data)
 export const deleteHistory = (id) => api.delete(`/history/${id}`)
 export const downloadHistory = (id) => `/api/history/${id}/download`

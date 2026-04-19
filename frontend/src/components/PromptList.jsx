@@ -44,9 +44,6 @@ export default function PromptList({ categories }) {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
               <span style={{ color: '#fff', fontWeight: 600, fontSize: '14px' }}>{p.name}</span>
-              <span style={{ background: '#1e1e1e', color: '#666', fontSize: '10px', padding: '2px 8px', borderRadius: '10px' }}>
-                {p.best_used_in}
-              </span>
             </div>
             <p style={{ color: '#666', fontSize: '12px', margin: 0 }}>{p.description}</p>
           </div>

@@ -30,9 +30,9 @@ def _run_scheduled_job(schedule_id: int):
         for key, val in inputs.items():
             filled = filled.replace(f"[{key}]", val)
 
-        provider = schedule.provider or "anthropic"
         DEFAULTS = {"anthropic": "claude-opus-4-6", "openai": "gpt-4o"}
-        model = schedule.model_name or DEFAULTS.get(provider, "claude-opus-4-6")
+        provider = schedule.provider or get_setting(db, "default_provider") or "anthropic"
+        model = schedule.model_name or get_setting(db, "default_model") or DEFAULTS.get(provider, "claude-opus-4-6")
 
         if provider == "openai":
             from openai import OpenAI
@@ -49,7 +49,7 @@ def _run_scheduled_job(schedule_id: int):
             result = response.choices[0].message.content
         else:
             import anthropic
-            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            api_key = os.environ.get("ANTHROPIC_API_KEY") or get_setting(db, "anthropic_api_key")
             client = anthropic.Anthropic(api_key=api_key)
             message = client.messages.create(
                 model=model,

@@ -3,17 +3,13 @@ import { getSchedules, createSchedule, updateSchedule, deleteSchedule, toggleSch
 
 const FREQUENCIES = ['daily', 'weekdays', 'weekly']
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-const MODELS = {
-  anthropic: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
-  openai: ['gpt-4o', 'gpt-4o-mini', 'o1-mini'],
-}
 
 export default function SchedulesPage() {
   const [schedules, setSchedules] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [allPrompts, setAllPrompts] = useState([])
-  const [form, setForm] = useState({ prompt_id: '', prompt_name: '', inputs: {}, frequency: 'daily', day_of_week: 'monday', run_time: '08:00', provider: 'anthropic', model_name: 'claude-opus-4-6', notify_email: false, notify_telegram: false })
+  const [form, setForm] = useState({ prompt_id: '', prompt_name: '', inputs: {}, frequency: 'daily', day_of_week: 'monday', run_time: '08:00', notify_email: false, notify_telegram: false })
 
   const load = () => getSchedules().then(setSchedules)
   useEffect(() => {
@@ -26,7 +22,7 @@ export default function SchedulesPage() {
 
   const openNew = () => {
     setEditing(null)
-    setForm({ prompt_id: '', prompt_name: '', inputs: {}, frequency: 'daily', day_of_week: 'monday', run_time: '08:00', provider: 'anthropic', model_name: 'claude-opus-4-6', notify_email: false, notify_telegram: false })
+    setForm({ prompt_id: '', prompt_name: '', inputs: {}, frequency: 'daily', day_of_week: 'monday', run_time: '08:00', notify_email: false, notify_telegram: false })
     setShowModal(true)
   }
 
@@ -134,25 +130,6 @@ export default function SchedulesPage() {
                 />
               </div>
             ))}
-
-            <label style={labelStyle}>Provider</label>
-            <select
-              value={form.provider}
-              onChange={e => setForm(f => ({ ...f, provider: e.target.value, model_name: MODELS[e.target.value][0] }))}
-              style={inputStyle}
-            >
-              <option value="anthropic">Anthropic</option>
-              <option value="openai">OpenAI</option>
-            </select>
-
-            <label style={labelStyle}>Model</label>
-            <select
-              value={form.model_name || MODELS[form.provider || 'anthropic'][0]}
-              onChange={e => setForm(f => ({ ...f, model_name: e.target.value }))}
-              style={inputStyle}
-            >
-              {(MODELS[form.provider || 'anthropic']).map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
 
             <label style={labelStyle}>Frequency</label>
             <select value={form.frequency} onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))} style={inputStyle}>
