@@ -1,10 +1,11 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-import os, json, logging
+import json, logging
 from datetime import datetime
+import config
 
 logger = logging.getLogger(__name__)
-scheduler = BackgroundScheduler()
+scheduler = BackgroundScheduler(timezone=config.SCHEDULER_TIMEZONE)
 
 def _run_scheduled_job(schedule_id: int):
     from database import SessionLocal
@@ -30,13 +31,26 @@ def _run_scheduled_job(schedule_id: int):
         for key, val in inputs.items():
             filled = filled.replace(f"[{key}]", val)
 
-        DEFAULTS = {"anthropic": "claude-opus-4-6", "openai": "gpt-4o"}
-        provider = schedule.provider or os.environ.get("DEFAULT_PROVIDER") or "anthropic"
-        model = schedule.model_name or os.environ.get("DEFAULT_MODEL") or DEFAULTS.get(provider, "claude-opus-4-6")
+        provider, model = config.resolve_model(schedule.provider, schedule.model_name)
 
-        if provider == "openai":
+        if provider == "openrouter":
             from openai import OpenAI
-            api_key = os.environ.get("OPENAI_API_KEY") or get_setting(db, "openai_api_key")
+            if not config.OPENROUTER_API_KEY:
+                logger.error(f"OPENROUTER_API_KEY not set for schedule {schedule_id}")
+                return
+            headers = {"X-Title": config.OPENROUTER_APP_NAME}
+            if config.OPENROUTER_SITE_URL:
+                headers["HTTP-Referer"] = config.OPENROUTER_SITE_URL
+            client = OpenAI(api_key=config.OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1", default_headers=headers)
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": filled}],
+                max_tokens=config.LLM_MAX_TOKENS,
+            )
+            result = response.choices[0].message.content
+        elif provider == "openai":
+            from openai import OpenAI
+            api_key = config.OPENAI_API_KEY or get_setting(db, "openai_api_key")
             if not api_key:
                 logger.error(f"OpenAI API key not set for schedule {schedule_id}")
                 return
@@ -44,16 +58,16 @@ def _run_scheduled_job(schedule_id: int):
             response = oai.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": filled}],
-                max_tokens=4096
+                max_tokens=config.LLM_MAX_TOKENS,
             )
             result = response.choices[0].message.content
-        else:
+        else:  # anthropic
             import anthropic
-            api_key = os.environ.get("ANTHROPIC_API_KEY") or get_setting(db, "anthropic_api_key")
+            api_key = config.ANTHROPIC_API_KEY or get_setting(db, "anthropic_api_key")
             client = anthropic.Anthropic(api_key=api_key)
             message = client.messages.create(
                 model=model,
-                max_tokens=4096,
+                max_tokens=config.LLM_MAX_TOKENS,
                 messages=[{"role": "user", "content": filled}]
             )
             result = message.content[0].text
@@ -63,7 +77,8 @@ def _run_scheduled_job(schedule_id: int):
             prompt_name=schedule.prompt_name,
             inputs=schedule.inputs,
             result=result,
-            source="scheduled"
+            source="scheduled",
+            model_used=f"{provider}/{model}"
         )
         db.add(entry)
         schedule.last_run_at = datetime.utcnow()
@@ -75,25 +90,19 @@ def _run_scheduled_job(schedule_id: int):
             email_enabled = get_setting(db, "email_enabled") != "false"
             if not email_enabled:
                 logger.info(f"Email notifications disabled globally, skipping schedule {schedule_id}")
+            elif config.GMAIL_ADDRESS and config.GMAIL_APP_PASSWORD:
+                send_email(config.GMAIL_ADDRESS, config.GMAIL_APP_PASSWORD, subject, result)
             else:
-                gmail = os.environ.get("GMAIL_ADDRESS")
-                pwd = os.environ.get("GMAIL_APP_PASSWORD")
-                if gmail and pwd:
-                    send_email(gmail, pwd, subject, result)
-                else:
-                    logger.warning(f"Email notification skipped: GMAIL_ADDRESS/GMAIL_APP_PASSWORD not set in env")
+                logger.warning(f"Email notification skipped: GMAIL_ADDRESS/GMAIL_APP_PASSWORD not set in env")
 
         if schedule.notify_telegram:
             telegram_enabled = get_setting(db, "telegram_enabled") != "false"
             if not telegram_enabled:
                 logger.info(f"Telegram notifications disabled globally, skipping schedule {schedule_id}")
+            elif config.TELEGRAM_BOT_TOKEN and config.TELEGRAM_CHAT_ID:
+                send_telegram(config.TELEGRAM_BOT_TOKEN, config.TELEGRAM_CHAT_ID, f"*{schedule.prompt_name}*\n\n{result}")
             else:
-                token = os.environ.get("TELEGRAM_BOT_TOKEN")
-                chat = os.environ.get("TELEGRAM_CHAT_ID")
-                if token and chat:
-                    send_telegram(token, chat, f"*{schedule.prompt_name}*\n\n{result}")
-                else:
-                    logger.warning(f"Telegram notification skipped: TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID not set in env")
+                logger.warning(f"Telegram notification skipped: TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID not set in env")
 
     except Exception as e:
         logger.error(f"Scheduled job {schedule_id} failed: {e}")

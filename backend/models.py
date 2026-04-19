@@ -10,6 +10,7 @@ class History(Base):
     inputs = Column(Text, nullable=False)   # JSON string
     result = Column(Text, nullable=False)
     source = Column(String, default="manual")  # "manual" | "scheduled"
+    model_used = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
 class Schedule(Base):

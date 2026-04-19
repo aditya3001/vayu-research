@@ -19,6 +19,7 @@ def list_history(db: Session = Depends(get_db)):
             "inputs": json.loads(h.inputs),
             "result": h.result,
             "source": h.source,
+            "model_used": h.model_used,
             "created_at": h.created_at.isoformat() if h.created_at else None
         }
         for h in items
@@ -35,6 +36,7 @@ def get_history(item_id: int, db: Session = Depends(get_db)):
         "inputs": json.loads(h.inputs),
         "result": h.result,
         "source": h.source,
+        "model_used": h.model_used,
         "created_at": h.created_at.isoformat() if h.created_at else None
     }
 
@@ -52,14 +54,16 @@ def save_to_notion(item_id: int, db: Session = Depends(get_db)):
     h = db.query(History).filter(History.id == item_id).first()
     if not h:
         raise HTTPException(status_code=404, detail="Not found")
-    import os
-    token = os.environ.get("NOTION_TOKEN")
-    page_id = os.environ.get("NOTION_PAGE_ID") or get_setting(db, "notion_page_id")
+    import config as cfg
+    token = cfg.NOTION_TOKEN
+    page_id = cfg.NOTION_PAGE_ID or get_setting(db, "notion_page_id")
     if not token or not page_id:
         raise HTTPException(status_code=400, detail="Notion not configured. Add token and page ID in Settings.")
     from notifier import send_notion
     from datetime import datetime
-    title = f"{h.prompt_name} — {h.created_at.strftime('%Y-%m-%d') if h.created_at else datetime.utcnow().strftime('%Y-%m-%d')}"
+    date_label = h.created_at.strftime('%Y-%m-%d') if h.created_at else datetime.utcnow().strftime('%Y-%m-%d')
+    model_label = f" — {h.model_used}" if h.model_used else ""
+    title = f"{h.prompt_name} — {date_label}{model_label}"
     ok, err = send_notion(token, page_id, title, h.result)
     if not ok:
         raise HTTPException(status_code=500, detail=err or "Failed to save to Notion.")
@@ -67,10 +71,10 @@ def save_to_notion(item_id: int, db: Session = Depends(get_db)):
 
 @router.get("/notion/test")
 def test_notion(db: Session = Depends(get_db)):
-    import os
+    import config as cfg
     from notifier import test_notion_connection
-    token = os.environ.get("NOTION_TOKEN")
-    page_id = os.environ.get("NOTION_PAGE_ID") or get_setting(db, "notion_page_id")
+    token = cfg.NOTION_TOKEN
+    page_id = cfg.NOTION_PAGE_ID or get_setting(db, "notion_page_id")
     if not token:
         raise HTTPException(status_code=400, detail="NOTION_TOKEN not set in environment.")
     if not page_id:
@@ -85,7 +89,7 @@ def download_history(item_id: int, db: Session = Depends(get_db)):
     filename = f"{h.prompt_name.replace(' ', '-').lower()}-{h.id}.md"
     date_str = h.created_at.strftime('%Y-%m-%d') if h.created_at else 'unknown'
     inputs_str = '\n'.join(f'{k}: {v}' for k, v in json.loads(h.inputs).items() if v)
-    content = f"---\ntitle: {h.prompt_name}\ndate: {date_str}\nsource: {h.source}\n---\n\n# {h.prompt_name}\n\n"
+    content = f"---\ntitle: {h.prompt_name}\ndate: {date_str}\nmodel: {h.model_used or 'unknown'}\nsource: {h.source}\n---\n\n# {h.prompt_name}\n\n"
     if inputs_str:
         content += f"**Inputs**\n{inputs_str}\n\n---\n\n"
     content += h.result

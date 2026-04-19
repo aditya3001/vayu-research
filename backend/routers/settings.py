@@ -15,25 +15,24 @@ class SettingsPayload(BaseModel):
 
 @router.get("/settings")
 def get_settings(db: Session = Depends(get_db)):
-    import os
+    import config as cfg
     rows = {s.key: s.value for s in db.query(Setting).all()}
     return {
-        "notion_page_id": os.environ.get("NOTION_PAGE_ID") or rows.get("notion_page_id", ""),
-        "notion_page_id_from_env": bool(os.environ.get("NOTION_PAGE_ID")),
-        "notion_configured": bool(os.environ.get("NOTION_TOKEN")),
+        "notion_page_id": cfg.NOTION_PAGE_ID or rows.get("notion_page_id", ""),
+        "notion_page_id_from_env": bool(cfg.NOTION_PAGE_ID),
+        "notion_configured": bool(cfg.NOTION_TOKEN),
         "auto_save_notion": rows.get("auto_save_notion", "false") == "true",
-        "email_configured": bool(os.environ.get("GMAIL_ADDRESS") and os.environ.get("GMAIL_APP_PASSWORD")),
+        "email_configured": bool(cfg.GMAIL_ADDRESS and cfg.GMAIL_APP_PASSWORD),
         "email_enabled": rows.get("email_enabled", "true") == "true",
-        "telegram_configured": bool(os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID")),
+        "telegram_configured": bool(cfg.TELEGRAM_BOT_TOKEN and cfg.TELEGRAM_CHAT_ID),
         "telegram_enabled": rows.get("telegram_enabled", "true") == "true",
+        "openrouter_configured": bool(cfg.OPENROUTER_API_KEY),
     }
 
 @router.get("/config")
 def get_config():
-    import os
-    provider = os.environ.get("DEFAULT_PROVIDER", "anthropic")
-    defaults = {"anthropic": "claude-opus-4-6", "openai": "gpt-4o"}
-    model = os.environ.get("DEFAULT_MODEL") or defaults.get(provider, "claude-opus-4-6")
+    import config as cfg
+    provider, model = cfg.resolve_model()
     return {"provider": provider, "model": model}
 
 @router.put("/settings")

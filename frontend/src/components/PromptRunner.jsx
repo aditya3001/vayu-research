@@ -98,6 +98,7 @@ export default function PromptRunner() {
   const navigate = useNavigate()
   const [prompt, setPrompt] = useState(null)
   const [inputs, setInputs] = useState({})
+  const [rawDates, setRawDates] = useState({})  // YYYY-MM-DD for date picker values
   const [activeModel, setActiveModel] = useState(null)   // { provider, model } from settings
   const [result, setResult] = useState('')
   const [usedModel, setUsedModel] = useState(null)       // { provider, model } from last run response
@@ -116,6 +117,7 @@ export default function PromptRunner() {
       const defaults = {}
       ;(p.placeholders || []).forEach(k => { defaults[k] = '' })
       setInputs(defaults)
+      setRawDates({})
       setResult('')
       setHistoryId(null)
       setUsedModel(null)
@@ -222,21 +224,39 @@ export default function PromptRunner() {
         <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '8px', padding: '18px', marginBottom: '16px' }}>
           {(prompt.placeholders || []).length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-              {(prompt.placeholders || []).map(key => (
-                <div key={key} style={{ flex: '1', minWidth: '200px' }}>
-                  <label style={{ display: 'block', color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
-                    {key}
-                  </label>
-                  <input
-                    value={inputs[key] || ''}
-                    onChange={e => setInputs({ ...inputs, [key]: e.target.value })}
-                    style={{ width: '100%', boxSizing: 'border-box', background: '#0d0d0d', border: '1px solid #222', borderRadius: '4px', padding: '9px 10px', color: '#e0e0e0', fontSize: '13px', outline: 'none', transition: 'border-color 0.15s' }}
-                    onFocus={e => e.target.style.borderColor = '#c9a96e'}
-                    onBlur={e => e.target.style.borderColor = '#222'}
-                    placeholder={`Enter ${key.toLowerCase()}`}
-                  />
-                </div>
-              ))}
+              {(prompt.placeholders || []).map(key => {
+                const isDate = /^(date|insert date)$/i.test(key.trim())
+                return (
+                  <div key={key} style={{ flex: '1', minWidth: '200px' }}>
+                    <label style={{ display: 'block', color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
+                      {key}
+                    </label>
+                    <input
+                      type={isDate ? 'date' : 'text'}
+                      value={isDate ? (rawDates[key] || '') : (inputs[key] || '')}
+                      onChange={e => {
+                        if (isDate) {
+                          const raw = e.target.value  // YYYY-MM-DD
+                          setRawDates(d => ({ ...d, [key]: raw }))
+                          if (raw) {
+                            const [y, m, day] = raw.split('-')
+                            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+                            const formatted = `${parseInt(day)} ${months[parseInt(m)-1]} ${y}`
+                            setInputs(prev => ({ ...prev, [key]: formatted }))
+                          } else {
+                            setInputs(prev => ({ ...prev, [key]: '' }))
+                          }
+                        } else {
+                          setInputs(prev => ({ ...prev, [key]: e.target.value }))
+                        }
+                      }}
+                      style={{ width: '100%', boxSizing: 'border-box', background: '#0d0d0d', border: '1px solid #222', borderRadius: '4px', padding: '9px 10px', color: '#e0e0e0', fontSize: '13px', outline: 'none', transition: 'border-color 0.15s', colorScheme: 'dark' }}
+                      onFocus={e => e.target.style.borderColor = '#c9a96e'}
+                      onBlur={e => e.target.style.borderColor = '#222'}
+                    />
+                  </div>
+                )
+              })}
             </div>
           )}
 

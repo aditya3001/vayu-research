@@ -3,19 +3,21 @@ import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import requests
+import config
 
 logger = logging.getLogger(__name__)
 
 def send_email(gmail_address: str, gmail_app_password: str, subject: str, body: str):
     try:
+        recipient = config.EMAIL_TO or gmail_address
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = gmail_address
-        msg["To"] = gmail_address
+        msg["To"] = recipient
         msg.attach(MIMEText(body, "plain"))
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        with smtplib.SMTP_SSL(config.SMTP_HOST, config.SMTP_PORT) as server:
             server.login(gmail_address, gmail_app_password)
-            server.sendmail(gmail_address, gmail_address, msg.as_string())
+            server.sendmail(gmail_address, recipient, msg.as_string())
         logger.info(f"Email sent: {subject}")
     except Exception as e:
         logger.error(f"Email failed: {e}")
@@ -35,7 +37,7 @@ def _notion_headers(token: str) -> dict:
     return {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28",
+        "Notion-Version": config.NOTION_API_VERSION,
     }
 
 def _normalize_page_id(page_id: str) -> str:
@@ -49,7 +51,7 @@ def test_notion_connection(token: str, page_id: str) -> dict:
         resp = requests.get(
             f"https://api.notion.com/v1/pages/{pid}",
             headers=_notion_headers(token),
-            timeout=10
+            timeout=config.NOTION_TIMEOUT,
         )
         if resp.status_code == 200:
             data = resp.json()
@@ -91,7 +93,7 @@ def send_notion(token: str, page_id: str, title: str, content: str) -> tuple[boo
         BATCH = 100
         url = f"https://api.notion.com/v1/blocks/{pid}/children"
         for i in range(0, len(children), BATCH):
-            resp = requests.patch(url, headers=headers, json={"children": children[i:i+BATCH]}, timeout=15)
+            resp = requests.patch(url, headers=headers, json={"children": children[i:i+BATCH]}, timeout=config.NOTION_TIMEOUT)
             if not resp.ok:
                 err = resp.json().get("message", resp.text[:200])
                 logger.error(f"Notion API error {resp.status_code}: {err}")

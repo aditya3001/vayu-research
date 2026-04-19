@@ -17,7 +17,7 @@ const ConnectedDot = ({ active }) => (
 )
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({ notion_page_id: '', notion_page_id_from_env: false, auto_save_notion: false, notion_configured: false, email_configured: false, email_enabled: true, telegram_configured: false, telegram_enabled: true })
+  const [settings, setSettings] = useState({ notion_page_id: '', notion_page_id_from_env: false, auto_save_notion: false, notion_configured: false, email_configured: false, email_enabled: true, telegram_configured: false, telegram_enabled: true, openrouter_configured: false })
   const [notionTest, setNotionTest] = useState(null)   // null | 'testing' | {ok, error?, page_title?}
 
   const [activeConfig, setActiveConfig] = useState(null)
@@ -52,7 +52,7 @@ export default function SettingsPage() {
               <>
                 <span style={{ fontFamily: 'monospace', fontSize: '13px', color: '#c9a96e', fontWeight: 500 }}>{activeConfig.model}</span>
                 <span style={{ color: '#2a2a2a' }}>·</span>
-                <span style={{ color: '#444', fontSize: '12px' }}>{activeConfig.provider === 'anthropic' ? 'Anthropic' : 'OpenAI'}</span>
+                <span style={{ color: '#444', fontSize: '12px' }}>{{ anthropic: 'Anthropic', openai: 'OpenAI', openrouter: 'OpenRouter' }[activeConfig.provider] || activeConfig.provider}</span>
                 <span style={{ marginLeft: 'auto', color: '#2a2a2a', fontSize: '10px', fontStyle: 'italic' }}>via DEFAULT_MODEL in .env</span>
               </>
             ) : (
@@ -100,6 +100,22 @@ export default function SettingsPage() {
               {settings.telegram_configured && !settings.telegram_enabled && (
                 <div style={{ marginTop: '8px', color: '#5a4a1a', fontSize: '11px', background: '#1a1500', borderRadius: '4px', padding: '5px 10px', animation: 's-fade 0.2s ease' }}>
                   Notifications paused — scheduled runs will not send Telegram messages
+                </div>
+              )}
+            </div>
+
+            {/* OpenRouter */}
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid #1a1a1a' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: '#ccc', fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>OpenRouter</div>
+                  <div style={{ color: '#383838', fontSize: '11px' }}>OPENROUTER_API_KEY in .env — access any model</div>
+                </div>
+                <ConnectedDot active={settings.openrouter_configured} />
+              </div>
+              {settings.openrouter_configured && (
+                <div style={{ marginTop: '8px', color: '#3a5a3a', fontSize: '11px', background: '#0a1a0a', borderRadius: '4px', padding: '5px 10px' }}>
+                  Set <code style={{ color: '#c9a96e', background: 'transparent' }}>DEFAULT_PROVIDER=openrouter</code> and <code style={{ color: '#c9a96e', background: 'transparent' }}>DEFAULT_MODEL=provider/model-name</code> in .env to use any model
                 </div>
               )}
             </div>

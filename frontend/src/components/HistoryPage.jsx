@@ -67,7 +67,7 @@ export default function HistoryPage() {
                   <div style={{ color: selected?.id === h.id ? '#c9a96e' : '#ccc', fontWeight: 500, fontSize: '12px', marginBottom: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {h.prompt_name}
                   </div>
-                  <div style={{ color: '#444', fontSize: '10px' }}>{fmt(h.created_at)}</div>
+                  <div style={{ color: '#444', fontSize: '10px' }}>{fmt(h.created_at)}{h.model_used ? <span style={{ color: '#333', marginLeft: '4px' }}>· {h.model_used.split('/')[1] || h.model_used}</span> : ''}</div>
                   {inputSummary(h.inputs) && (
                     <div style={{ color: '#333', fontSize: '10px', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {inputSummary(h.inputs)}
@@ -93,7 +93,11 @@ export default function HistoryPage() {
             <div style={{ padding: '16px 24px', borderBottom: '1px solid #1a1a1a', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <div>
                 <div style={{ color: '#fff', fontWeight: 600, fontSize: '14px' }}>{selected.prompt_name}</div>
-                <div style={{ color: '#444', fontSize: '11px', marginTop: '2px' }}>{fmt(selected.created_at)}{inputSummary(selected.inputs) ? ' · ' + inputSummary(selected.inputs) : ''}</div>
+                <div style={{ color: '#444', fontSize: '11px', marginTop: '2px' }}>
+                {fmt(selected.created_at)}
+                {selected.model_used && <span style={{ background: '#1a1a1a', border: '1px solid #222', borderRadius: '3px', padding: '1px 6px', fontSize: '10px', color: '#555', fontFamily: 'monospace', marginLeft: '8px' }}>{selected.model_used}</span>}
+                {inputSummary(selected.inputs) ? ' · ' + inputSummary(selected.inputs) : ''}
+              </div>
               </div>
               <a
                 href={downloadHistory(selected.id)}
