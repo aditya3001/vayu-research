@@ -10,8 +10,6 @@ router = APIRouter()
 class SettingsPayload(BaseModel):
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
-    default_provider: Optional[str] = None
-    default_model: Optional[str] = None
     notion_token: Optional[str] = None
     notion_page_id: Optional[str] = None
 
@@ -22,13 +20,19 @@ def get_settings(db: Session = Depends(get_db)):
     return {
         "openai_api_key": "***" if rows.get("openai_api_key") else "",
         "anthropic_api_key": "***" if rows.get("anthropic_api_key") else "",
-        "default_provider": rows.get("default_provider", "anthropic"),
-        "default_model": rows.get("default_model", ""),
         "notion_token": "***" if rows.get("notion_token") else "",
         "notion_page_id": rows.get("notion_page_id", ""),
         "_email_configured": bool(os.environ.get("GMAIL_ADDRESS") and os.environ.get("GMAIL_APP_PASSWORD")),
         "_telegram_configured": bool(os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID")),
     }
+
+@router.get("/config")
+def get_config():
+    import os
+    provider = os.environ.get("DEFAULT_PROVIDER", "anthropic")
+    defaults = {"anthropic": "claude-opus-4-6", "openai": "gpt-4o"}
+    model = os.environ.get("DEFAULT_MODEL") or defaults.get(provider, "claude-opus-4-6")
+    return {"provider": provider, "model": model}
 
 @router.put("/settings")
 def update_settings(payload: SettingsPayload, db: Session = Depends(get_db)):

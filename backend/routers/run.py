@@ -58,8 +58,8 @@ def run_prompt(req: RunRequest, db: Session = Depends(get_db)):
     for key, val in req.inputs.items():
         filled = filled.replace(f"[{key}]", val)
 
-    provider = req.provider or get_setting(db, "default_provider") or "anthropic"
-    model = req.model or get_setting(db, "default_model") or PROVIDER_DEFAULTS.get(provider, "claude-opus-4-6")
+    provider = req.provider or os.environ.get("DEFAULT_PROVIDER") or "anthropic"
+    model = req.model or os.environ.get("DEFAULT_MODEL") or PROVIDER_DEFAULTS.get(provider, "claude-opus-4-6")
 
     result = _call_llm(provider, model, filled, db)
 
@@ -73,4 +73,4 @@ def run_prompt(req: RunRequest, db: Session = Depends(get_db)):
     db.add(entry)
     db.commit()
     db.refresh(entry)
-    return {"result": result, "history_id": entry.id}
+    return {"result": result, "history_id": entry.id, "model": model, "provider": provider}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
-import { getPrompt, runPrompt, saveToNotion } from '../api'
+import { getPrompt, runPrompt, saveToNotion, getConfig } from '../api'
 
 const LOADER_STYLES = `
   @keyframes vr-spin { to { transform: rotate(360deg); } }
@@ -18,7 +18,7 @@ const STATUS_MESSAGES = [
   'Almost there...',
 ]
 
-function Loader({ elapsed }) {
+function Loader({ elapsed, model }) {
   const [msgIdx, setMsgIdx] = useState(0)
 
   useEffect(() => {
@@ -53,8 +53,9 @@ function Loader({ elapsed }) {
             {STATUS_MESSAGES[msgIdx]}
           </div>
           <div style={{ color: '#444', fontSize: '11px' }}>
+            {model && <span style={{ fontFamily: 'monospace', color: '#3a3a3a', marginRight: '8px' }}>{model.model}</span>}
             {elapsed < 5
-              ? 'Processing your request'
+              ? 'processing your request'
               : elapsed < 15
               ? `${elapsed}s — complex prompts take a moment`
               : `${elapsed}s — still working, please wait`}
@@ -94,11 +95,17 @@ function PromptTextView({ text }) {
   )
 }
 
+const PROVIDER_LABEL = { anthropic: 'Anthropic', openai: 'OpenAI' }
+const PROVIDER_DEFAULT_MODEL = { anthropic: 'claude-opus-4-6', openai: 'gpt-4o' }
+
 export default function PromptRunner() {
   const { promptId } = useParams()
+  const navigate = useNavigate()
   const [prompt, setPrompt] = useState(null)
   const [inputs, setInputs] = useState({})
+  const [activeModel, setActiveModel] = useState(null)   // { provider, model } from settings
   const [result, setResult] = useState('')
+  const [usedModel, setUsedModel] = useState(null)       // { provider, model } from last run response
   const [historyId, setHistoryId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [elapsed, setElapsed] = useState(0)
@@ -116,9 +123,14 @@ export default function PromptRunner() {
       setInputs(defaults)
       setResult('')
       setHistoryId(null)
+      setUsedModel(null)
       setNotionStatus('')
     })
   }, [promptId])
+
+  useEffect(() => {
+    getConfig().then(c => setActiveModel({ provider: c.provider, model: c.model }))
+  }, [])
 
   const startTimer = () => {
     setElapsed(0)
@@ -140,6 +152,7 @@ export default function PromptRunner() {
       const data = await runPrompt(promptId, inputs)
       setResult(data.result)
       setHistoryId(data.history_id)
+      setUsedModel({ provider: data.provider, model: data.model })
     } catch (e) {
       setError(e.response?.data?.detail || 'Something went wrong')
     } finally {
@@ -233,14 +246,31 @@ export default function PromptRunner() {
           )}
 
           {!loading ? (
-            <button onClick={handleRun} style={{ background: '#c9a96e', color: '#000', border: 'none', borderRadius: '4px', padding: '10px 28px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'opacity 0.15s' }}
-              onMouseEnter={e => e.target.style.opacity = '0.85'}
-              onMouseLeave={e => e.target.style.opacity = '1'}
-            >
-              Run →
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <button onClick={handleRun} style={{ background: '#c9a96e', color: '#000', border: 'none', borderRadius: '4px', padding: '10px 28px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'opacity 0.15s' }}
+                onMouseEnter={e => e.target.style.opacity = '0.85'}
+                onMouseLeave={e => e.target.style.opacity = '1'}
+              >
+                Run →
+              </button>
+              {activeModel && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#333', fontSize: '11px' }}>via</span>
+                  <span style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', color: '#888', fontFamily: 'monospace' }}>
+                    {activeModel.model}
+                  </span>
+                  <span style={{ color: '#2a2a2a', fontSize: '11px' }}>·</span>
+                  <button
+                    onClick={() => navigate('/settings')}
+                    style={{ background: 'none', border: 'none', color: '#3a3a3a', fontSize: '11px', cursor: 'pointer', padding: '0', textDecoration: 'underline', textDecorationColor: '#2a2a2a' }}
+                  >
+                    change
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
-            <Loader elapsed={elapsed} />
+            <Loader elapsed={elapsed} model={activeModel} />
           )}
         </div>
 
@@ -255,7 +285,14 @@ export default function PromptRunner() {
         {result && (
           <div style={{ animation: 'vr-fade-in 0.3s ease' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <span style={{ color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Result</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Result</span>
+                {usedModel && (
+                  <span style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '3px', padding: '2px 8px', fontSize: '10px', color: '#555', fontFamily: 'monospace' }}>
+                    {PROVIDER_LABEL[usedModel.provider] || usedModel.provider} / {usedModel.model}
+                  </span>
+                )}
+              </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 {notionStatus === 'saved' && <span style={{ color: '#4caf50', fontSize: '11px' }}>✓ Saved to Notion</span>}
                 {notionStatus && notionStatus !== 'saved' && notionStatus !== 'saving' && (

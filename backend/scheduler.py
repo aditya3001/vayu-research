@@ -31,8 +31,8 @@ def _run_scheduled_job(schedule_id: int):
             filled = filled.replace(f"[{key}]", val)
 
         DEFAULTS = {"anthropic": "claude-opus-4-6", "openai": "gpt-4o"}
-        provider = schedule.provider or get_setting(db, "default_provider") or "anthropic"
-        model = schedule.model_name or get_setting(db, "default_model") or DEFAULTS.get(provider, "claude-opus-4-6")
+        provider = schedule.provider or os.environ.get("DEFAULT_PROVIDER") or "anthropic"
+        model = schedule.model_name or os.environ.get("DEFAULT_MODEL") or DEFAULTS.get(provider, "claude-opus-4-6")
 
         if provider == "openai":
             from openai import OpenAI
