@@ -72,16 +72,20 @@ def _run_scheduled_job(schedule_id: int):
         subject = f"[Vayu Research] {schedule.prompt_name} — {datetime.utcnow().strftime('%Y-%m-%d')}"
 
         if schedule.notify_email:
-            gmail = get_setting(db, "gmail_address")
-            pwd = get_setting(db, "gmail_app_password")
+            gmail = os.environ.get("GMAIL_ADDRESS")
+            pwd = os.environ.get("GMAIL_APP_PASSWORD")
             if gmail and pwd:
                 send_email(gmail, pwd, subject, result)
+            else:
+                logger.warning(f"Email notification skipped: GMAIL_ADDRESS/GMAIL_APP_PASSWORD not set in env")
 
         if schedule.notify_telegram:
-            token = get_setting(db, "telegram_bot_token")
-            chat = get_setting(db, "telegram_chat_id")
+            token = os.environ.get("TELEGRAM_BOT_TOKEN")
+            chat = os.environ.get("TELEGRAM_CHAT_ID")
             if token and chat:
                 send_telegram(token, chat, f"*{schedule.prompt_name}*\n\n{result}")
+            else:
+                logger.warning(f"Telegram notification skipped: TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID not set in env")
 
     except Exception as e:
         logger.error(f"Scheduled job {schedule_id} failed: {e}")

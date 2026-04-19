@@ -8,10 +8,6 @@ from typing import Optional
 router = APIRouter()
 
 class SettingsPayload(BaseModel):
-    gmail_address: Optional[str] = None
-    gmail_app_password: Optional[str] = None
-    telegram_bot_token: Optional[str] = None
-    telegram_chat_id: Optional[str] = None
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     default_provider: Optional[str] = None
@@ -21,18 +17,17 @@ class SettingsPayload(BaseModel):
 
 @router.get("/settings")
 def get_settings(db: Session = Depends(get_db)):
+    import os
     rows = {s.key: s.value for s in db.query(Setting).all()}
     return {
-        "gmail_address": rows.get("gmail_address", ""),
-        "gmail_app_password": "***" if rows.get("gmail_app_password") else "",
-        "telegram_bot_token": "***" if rows.get("telegram_bot_token") else "",
-        "telegram_chat_id": rows.get("telegram_chat_id", ""),
         "openai_api_key": "***" if rows.get("openai_api_key") else "",
         "anthropic_api_key": "***" if rows.get("anthropic_api_key") else "",
         "default_provider": rows.get("default_provider", "anthropic"),
         "default_model": rows.get("default_model", ""),
         "notion_token": "***" if rows.get("notion_token") else "",
         "notion_page_id": rows.get("notion_page_id", ""),
+        "_email_configured": bool(os.environ.get("GMAIL_ADDRESS") and os.environ.get("GMAIL_APP_PASSWORD")),
+        "_telegram_configured": bool(os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID")),
     }
 
 @router.put("/settings")
