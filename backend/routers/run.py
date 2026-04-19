@@ -18,8 +18,8 @@ PROVIDER_DEFAULTS = {
 class RunRequest(BaseModel):
     prompt_id: str
     inputs: dict
-    provider: str = "anthropic"
-    model: Optional[str] = None  # None → use provider default
+    provider: Optional[str] = None
+    model: Optional[str] = None
 
 def _call_llm(provider: str, model: str, content: str, db: Session) -> str:
     if provider == "openai":

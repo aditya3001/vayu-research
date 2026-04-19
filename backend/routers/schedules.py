@@ -16,7 +16,7 @@ class ScheduleCreate(BaseModel):
     frequency: str  # daily | weekdays | weekly
     day_of_week: Optional[str] = None
     run_time: str   # "08:00"
-    provider: str = "anthropic"
+    provider: Optional[str] = None
     model_name: Optional[str] = None
     notify_email: bool = False
     notify_telegram: bool = False
