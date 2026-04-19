@@ -82,8 +82,13 @@ def download_history(item_id: int, db: Session = Depends(get_db)):
     h = db.query(History).filter(History.id == item_id).first()
     if not h:
         raise HTTPException(status_code=404, detail="Not found")
-    filename = f"{h.prompt_id}-{h.id}.md"
-    content = f"# {h.prompt_name}\n\n**Date:** {h.created_at}\n**Source:** {h.source}\n\n---\n\n{h.result}"
+    filename = f"{h.prompt_name.replace(' ', '-').lower()}-{h.id}.md"
+    date_str = h.created_at.strftime('%Y-%m-%d') if h.created_at else 'unknown'
+    inputs_str = '\n'.join(f'{k}: {v}' for k, v in json.loads(h.inputs).items() if v)
+    content = f"---\ntitle: {h.prompt_name}\ndate: {date_str}\nsource: {h.source}\n---\n\n# {h.prompt_name}\n\n"
+    if inputs_str:
+        content += f"**Inputs**\n{inputs_str}\n\n---\n\n"
+    content += h.result
     return Response(
         content=content,
         media_type="text/markdown",

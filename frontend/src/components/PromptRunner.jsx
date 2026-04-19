@@ -4,48 +4,6 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getPrompt, runPrompt, saveToNotion, getConfig } from '../api'
 
-const GLOBAL_STYLES = `
-  @keyframes vr-spin { to { transform: rotate(360deg); } }
-  @keyframes vr-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes vr-bar { 0% { width: 0%; } 60% { width: 75%; } 100% { width: 92%; } }
-  @keyframes vr-dot { 0%, 80%, 100% { transform: scale(0); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
-
-  .md h1 { font-size: 20px; font-weight: 700; color: #fff; margin: 28px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #1e1e1e; }
-  .md h2 { font-size: 16px; font-weight: 600; color: #e0e0e0; margin: 24px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #1a1a1a; }
-  .md h3 { font-size: 14px; font-weight: 600; color: #c9a96e; margin: 20px 0 8px; }
-  .md h4 { font-size: 13px; font-weight: 600; color: #a08050; margin: 16px 0 6px; }
-  .md p  { color: #bbb; font-size: 13px; line-height: 1.85; margin: 0 0 14px; }
-  .md strong { color: #e8e8e8; font-weight: 600; }
-  .md em { color: #aaa; font-style: italic; }
-  .md a  { color: #c9a96e; text-decoration: underline; text-decoration-color: #5a4a2e; }
-  .md a:hover { text-decoration-color: #c9a96e; }
-
-  .md ul { list-style: none; padding: 0; margin: 0 0 14px; }
-  .md ol { list-style: none; padding: 0; margin: 0 0 14px; counter-reset: ol-counter; }
-  .md ul li { color: #bbb; font-size: 13px; line-height: 1.8; padding: 3px 0 3px 18px; position: relative; }
-  .md ul li::before { content: '–'; position: absolute; left: 0; color: #c9a96e; font-weight: 700; }
-  .md ol li { color: #bbb; font-size: 13px; line-height: 1.8; padding: 3px 0 3px 28px; position: relative; counter-increment: ol-counter; }
-  .md ol li::before { content: counter(ol-counter) '.'; position: absolute; left: 0; color: #c9a96e; font-weight: 600; font-size: 12px; min-width: 22px; }
-
-  .md code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 3px; padding: 1px 6px; color: #c9a96e; }
-  .md pre  { background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 6px; padding: 16px; overflow-x: auto; margin: 0 0 16px; }
-  .md pre code { background: none; border: none; padding: 0; color: #b0c4b1; font-size: 12px; line-height: 1.7; }
-
-  .md blockquote { border-left: 3px solid #c9a96e; background: #0f0e0a; margin: 0 0 16px; padding: 10px 16px; border-radius: 0 4px 4px 0; }
-  .md blockquote p { color: #888; font-style: italic; margin: 0; }
-
-  .md hr { border: none; border-top: 1px solid #1e1e1e; margin: 24px 0; }
-
-  .md table { width: 100%; border-collapse: collapse; margin: 0 0 18px; font-size: 12px; }
-  .md thead tr { border-bottom: 1px solid #333; }
-  .md th { text-align: left; color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 12px; font-weight: 600; }
-  .md td { color: #bbb; padding: 9px 12px; border-bottom: 1px solid #1a1a1a; vertical-align: top; line-height: 1.6; }
-  .md tr:last-child td { border-bottom: none; }
-  .md tr:hover td { background: #111; }
-
-  .md > *:first-child { margin-top: 0 !important; }
-  .md > *:last-child  { margin-bottom: 0 !important; }
-`
 
 const STATUS_MESSAGES = [
   'Sending request to model...',
@@ -226,7 +184,6 @@ export default function PromptRunner() {
 
   return (
     <>
-      <style>{GLOBAL_STYLES}</style>
       <div style={{ padding: '28px 24px', maxWidth: '860px' }}>
 
         {/* Header */}

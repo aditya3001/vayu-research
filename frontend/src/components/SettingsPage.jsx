@@ -1,15 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getSettings, updateSettings, getConfig, testNotion } from '../api'
 
-const STYLES = `
-  @keyframes s-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-  .s-toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
-  .s-toggle input { opacity: 0; width: 0; height: 0; }
-  .s-slider { position: absolute; inset: 0; background: #1e1e1e; border-radius: 22px; cursor: pointer; transition: background 0.2s; border: 1px solid #2a2a2a; }
-  .s-slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px; background: #444; border-radius: 50%; transition: all 0.2s; }
-  input:checked + .s-slider { background: #1e1a10; border-color: #c9a96e; }
-  input:checked + .s-slider::before { transform: translateX(18px); background: #c9a96e; }
-`
 
 const Toggle = ({ checked, onChange }) => (
   <label className="s-toggle">
@@ -47,7 +38,6 @@ export default function SettingsPage() {
 
   return (
     <>
-      <style>{STYLES}</style>
       <div style={{ padding: '32px 28px', maxWidth: '520px', animation: 's-fade 0.25s ease' }}>
         <h1 style={{ color: '#fff', fontSize: '18px', fontWeight: 600, margin: '0 0 4px' }}>Settings</h1>
         <p style={{ color: '#383838', fontSize: '12px', margin: '0 0 32px' }}>
