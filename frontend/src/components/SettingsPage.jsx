@@ -26,7 +26,7 @@ const ConnectedDot = ({ active }) => (
 )
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({ notion_page_id: '', auto_save_notion: false, notion_configured: false, email_configured: false, email_enabled: true, telegram_configured: false, telegram_enabled: true })
+  const [settings, setSettings] = useState({ notion_page_id: '', notion_page_id_from_env: false, auto_save_notion: false, notion_configured: false, email_configured: false, email_enabled: true, telegram_configured: false, telegram_enabled: true })
   const [activeConfig, setActiveConfig] = useState(null)
   const [saved, setSaved] = useState(false)
 
@@ -125,16 +125,25 @@ export default function SettingsPage() {
               {settings.notion_configured && (
                 <div style={{ animation: 's-fade 0.2s ease' }}>
                   <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Page ID</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Page ID</label>
+                      {settings.notion_page_id_from_env && (
+                        <span style={{ color: '#383838', fontSize: '10px', fontStyle: 'italic' }}>via NOTION_PAGE_ID env var</span>
+                      )}
+                    </div>
                     <input
                       value={settings.notion_page_id || ''}
-                      onChange={e => setSettings(s => ({ ...s, notion_page_id: e.target.value }))}
-                      onBlur={e => save({ notion_page_id: e.target.value })}
+                      onChange={e => !settings.notion_page_id_from_env && setSettings(s => ({ ...s, notion_page_id: e.target.value }))}
+                      onBlur={e => !settings.notion_page_id_from_env && save({ notion_page_id: e.target.value })}
                       placeholder="32-char ID from page URL"
-                      style={{ width: '100%', boxSizing: 'border-box', background: '#111', border: '1px solid #222', borderRadius: '4px', padding: '8px 12px', color: '#e0e0e0', fontSize: '12px', outline: 'none', fontFamily: 'monospace' }}
-                      onFocus={e => e.target.style.borderColor = '#c9a96e'}
+                      readOnly={settings.notion_page_id_from_env}
+                      style={{ width: '100%', boxSizing: 'border-box', background: settings.notion_page_id_from_env ? '#0a0a0a' : '#111', border: '1px solid #222', borderRadius: '4px', padding: '8px 12px', color: settings.notion_page_id_from_env ? '#555' : '#e0e0e0', fontSize: '12px', outline: 'none', fontFamily: 'monospace', cursor: settings.notion_page_id_from_env ? 'default' : 'text' }}
+                      onFocus={e => { if (!settings.notion_page_id_from_env) e.target.style.borderColor = '#c9a96e' }}
+                      onBlurCapture={e => e.target.style.borderColor = '#222'}
                     />
-                    <p style={{ color: '#333', fontSize: '11px', margin: '5px 0 0' }}>Paste the page ID from its Notion URL. The integration must be shared with this page.</p>
+                    {!settings.notion_page_id_from_env && (
+                      <p style={{ color: '#333', fontSize: '11px', margin: '5px 0 0' }}>Or set NOTION_PAGE_ID in .env to configure server-side.</p>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#111', borderRadius: '6px', border: '1px solid #1a1a1a' }}>

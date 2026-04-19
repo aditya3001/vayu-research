@@ -78,7 +78,7 @@ def run_prompt(req: RunRequest, db: Session = Depends(get_db)):
     auto_save = get_setting(db, "auto_save_notion") == "true"
     if auto_save:
         notion_token = os.environ.get("NOTION_TOKEN")
-        notion_page_id = get_setting(db, "notion_page_id")
+        notion_page_id = os.environ.get("NOTION_PAGE_ID") or get_setting(db, "notion_page_id")
         if notion_token and notion_page_id:
             from notifier import send_notion
             from datetime import datetime

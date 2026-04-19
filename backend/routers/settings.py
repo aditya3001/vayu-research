@@ -18,7 +18,8 @@ def get_settings(db: Session = Depends(get_db)):
     import os
     rows = {s.key: s.value for s in db.query(Setting).all()}
     return {
-        "notion_page_id": rows.get("notion_page_id", ""),
+        "notion_page_id": os.environ.get("NOTION_PAGE_ID") or rows.get("notion_page_id", ""),
+        "notion_page_id_from_env": bool(os.environ.get("NOTION_PAGE_ID")),
         "notion_configured": bool(os.environ.get("NOTION_TOKEN")),
         "auto_save_notion": rows.get("auto_save_notion", "false") == "true",
         "email_configured": bool(os.environ.get("GMAIL_ADDRESS") and os.environ.get("GMAIL_APP_PASSWORD")),
