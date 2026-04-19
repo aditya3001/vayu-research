@@ -190,6 +190,7 @@ export default function PromptRunner() {
       setResult(data.result)
       setHistoryId(data.history_id)
       setUsedModel({ provider: data.provider, model: data.model })
+      if (data.notion_saved) setNotionStatus('saved')
     } catch (e) {
       setError(e.response?.data?.detail || 'Something went wrong')
     } finally {

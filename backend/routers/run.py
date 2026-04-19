@@ -73,4 +73,16 @@ def run_prompt(req: RunRequest, db: Session = Depends(get_db)):
     db.add(entry)
     db.commit()
     db.refresh(entry)
-    return {"result": result, "history_id": entry.id, "model": model, "provider": provider}
+
+    notion_saved = False
+    auto_save = get_setting(db, "auto_save_notion") == "true"
+    if auto_save:
+        notion_token = os.environ.get("NOTION_TOKEN")
+        notion_page_id = get_setting(db, "notion_page_id")
+        if notion_token and notion_page_id:
+            from notifier import send_notion
+            from datetime import datetime
+            title = f"{prompt['name']} — {datetime.utcnow().strftime('%Y-%m-%d')}"
+            notion_saved = send_notion(notion_token, notion_page_id, title, result)
+
+    return {"result": result, "history_id": entry.id, "model": model, "provider": provider, "notion_saved": notion_saved}

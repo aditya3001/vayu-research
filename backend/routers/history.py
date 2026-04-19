@@ -52,7 +52,8 @@ def save_to_notion(item_id: int, db: Session = Depends(get_db)):
     h = db.query(History).filter(History.id == item_id).first()
     if not h:
         raise HTTPException(status_code=404, detail="Not found")
-    token = get_setting(db, "notion_token")
+    import os
+    token = os.environ.get("NOTION_TOKEN")
     page_id = get_setting(db, "notion_page_id")
     if not token or not page_id:
         raise HTTPException(status_code=400, detail="Notion not configured. Add token and page ID in Settings.")

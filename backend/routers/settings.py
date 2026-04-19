@@ -8,22 +8,19 @@ from typing import Optional
 router = APIRouter()
 
 class SettingsPayload(BaseModel):
-    openai_api_key: Optional[str] = None
-    anthropic_api_key: Optional[str] = None
-    notion_token: Optional[str] = None
     notion_page_id: Optional[str] = None
+    auto_save_notion: Optional[bool] = None
 
 @router.get("/settings")
 def get_settings(db: Session = Depends(get_db)):
     import os
     rows = {s.key: s.value for s in db.query(Setting).all()}
     return {
-        "openai_api_key": "***" if rows.get("openai_api_key") else "",
-        "anthropic_api_key": "***" if rows.get("anthropic_api_key") else "",
-        "notion_token": "***" if rows.get("notion_token") else "",
         "notion_page_id": rows.get("notion_page_id", ""),
-        "_email_configured": bool(os.environ.get("GMAIL_ADDRESS") and os.environ.get("GMAIL_APP_PASSWORD")),
-        "_telegram_configured": bool(os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID")),
+        "notion_configured": bool(os.environ.get("NOTION_TOKEN")),
+        "auto_save_notion": rows.get("auto_save_notion", "false") == "true",
+        "email_configured": bool(os.environ.get("GMAIL_ADDRESS") and os.environ.get("GMAIL_APP_PASSWORD")),
+        "telegram_configured": bool(os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID")),
     }
 
 @router.get("/config")
@@ -38,13 +35,12 @@ def get_config():
 def update_settings(payload: SettingsPayload, db: Session = Depends(get_db)):
     data = payload.dict(exclude_none=True)
     for key, value in data.items():
-        if value == "***":  # Don't overwrite masked values
-            continue
+        str_value = "true" if value is True else "false" if value is False else str(value)
         existing = db.query(Setting).filter(Setting.key == key).first()
         if existing:
-            existing.value = value
+            existing.value = str_value
         else:
-            db.add(Setting(key=key, value=value))
+            db.add(Setting(key=key, value=str_value))
     db.commit()
     return {"ok": True}
 
