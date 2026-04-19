@@ -26,7 +26,7 @@ const ConnectedDot = ({ active }) => (
 )
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({ notion_page_id: '', auto_save_notion: false, notion_configured: false, email_configured: false, telegram_configured: false })
+  const [settings, setSettings] = useState({ notion_page_id: '', auto_save_notion: false, notion_configured: false, email_configured: false, email_enabled: true, telegram_configured: false, telegram_enabled: true })
   const [activeConfig, setActiveConfig] = useState(null)
   const [saved, setSaved] = useState(false)
 
@@ -75,21 +75,41 @@ export default function SettingsPage() {
           <div style={{ background: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: '8px', overflow: 'hidden' }}>
 
             {/* Email */}
-            <div style={{ display: 'flex', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid #1a1a1a' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: '#ccc', fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>Email</div>
-                <div style={{ color: '#383838', fontSize: '11px' }}>GMAIL_ADDRESS + GMAIL_APP_PASSWORD</div>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid #1a1a1a' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: '#ccc', fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>Email</div>
+                  <div style={{ color: '#383838', fontSize: '11px' }}>GMAIL_ADDRESS + GMAIL_APP_PASSWORD</div>
+                </div>
+                {settings.email_configured
+                  ? <Toggle checked={settings.email_enabled} onChange={v => save({ email_enabled: v })} />
+                  : <ConnectedDot active={false} />
+                }
               </div>
-              <ConnectedDot active={settings.email_configured} />
+              {settings.email_configured && !settings.email_enabled && (
+                <div style={{ marginTop: '8px', color: '#5a4a1a', fontSize: '11px', background: '#1a1500', borderRadius: '4px', padding: '5px 10px', animation: 's-fade 0.2s ease' }}>
+                  Notifications paused — scheduled runs will not send emails
+                </div>
+              )}
             </div>
 
             {/* Telegram */}
-            <div style={{ display: 'flex', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid #1a1a1a' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: '#ccc', fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>Telegram</div>
-                <div style={{ color: '#383838', fontSize: '11px' }}>TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID</div>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid #1a1a1a' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: '#ccc', fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>Telegram</div>
+                  <div style={{ color: '#383838', fontSize: '11px' }}>TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID</div>
+                </div>
+                {settings.telegram_configured
+                  ? <Toggle checked={settings.telegram_enabled} onChange={v => save({ telegram_enabled: v })} />
+                  : <ConnectedDot active={false} />
+                }
               </div>
-              <ConnectedDot active={settings.telegram_configured} />
+              {settings.telegram_configured && !settings.telegram_enabled && (
+                <div style={{ marginTop: '8px', color: '#5a4a1a', fontSize: '11px', background: '#1a1500', borderRadius: '4px', padding: '5px 10px', animation: 's-fade 0.2s ease' }}>
+                  Notifications paused — scheduled runs will not send Telegram messages
+                </div>
+              )}
             </div>
 
             {/* Notion */}

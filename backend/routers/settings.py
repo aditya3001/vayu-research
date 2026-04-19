@@ -10,6 +10,8 @@ router = APIRouter()
 class SettingsPayload(BaseModel):
     notion_page_id: Optional[str] = None
     auto_save_notion: Optional[bool] = None
+    email_enabled: Optional[bool] = None
+    telegram_enabled: Optional[bool] = None
 
 @router.get("/settings")
 def get_settings(db: Session = Depends(get_db)):
@@ -20,7 +22,9 @@ def get_settings(db: Session = Depends(get_db)):
         "notion_configured": bool(os.environ.get("NOTION_TOKEN")),
         "auto_save_notion": rows.get("auto_save_notion", "false") == "true",
         "email_configured": bool(os.environ.get("GMAIL_ADDRESS") and os.environ.get("GMAIL_APP_PASSWORD")),
+        "email_enabled": rows.get("email_enabled", "true") == "true",
         "telegram_configured": bool(os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID")),
+        "telegram_enabled": rows.get("telegram_enabled", "true") == "true",
     }
 
 @router.get("/config")

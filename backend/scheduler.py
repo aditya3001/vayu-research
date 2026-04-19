@@ -72,20 +72,28 @@ def _run_scheduled_job(schedule_id: int):
         subject = f"[Vayu Research] {schedule.prompt_name} — {datetime.utcnow().strftime('%Y-%m-%d')}"
 
         if schedule.notify_email:
-            gmail = os.environ.get("GMAIL_ADDRESS")
-            pwd = os.environ.get("GMAIL_APP_PASSWORD")
-            if gmail and pwd:
-                send_email(gmail, pwd, subject, result)
+            email_enabled = get_setting(db, "email_enabled") != "false"
+            if not email_enabled:
+                logger.info(f"Email notifications disabled globally, skipping schedule {schedule_id}")
             else:
-                logger.warning(f"Email notification skipped: GMAIL_ADDRESS/GMAIL_APP_PASSWORD not set in env")
+                gmail = os.environ.get("GMAIL_ADDRESS")
+                pwd = os.environ.get("GMAIL_APP_PASSWORD")
+                if gmail and pwd:
+                    send_email(gmail, pwd, subject, result)
+                else:
+                    logger.warning(f"Email notification skipped: GMAIL_ADDRESS/GMAIL_APP_PASSWORD not set in env")
 
         if schedule.notify_telegram:
-            token = os.environ.get("TELEGRAM_BOT_TOKEN")
-            chat = os.environ.get("TELEGRAM_CHAT_ID")
-            if token and chat:
-                send_telegram(token, chat, f"*{schedule.prompt_name}*\n\n{result}")
+            telegram_enabled = get_setting(db, "telegram_enabled") != "false"
+            if not telegram_enabled:
+                logger.info(f"Telegram notifications disabled globally, skipping schedule {schedule_id}")
             else:
-                logger.warning(f"Telegram notification skipped: TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID not set in env")
+                token = os.environ.get("TELEGRAM_BOT_TOKEN")
+                chat = os.environ.get("TELEGRAM_CHAT_ID")
+                if token and chat:
+                    send_telegram(token, chat, f"*{schedule.prompt_name}*\n\n{result}")
+                else:
+                    logger.warning(f"Telegram notification skipped: TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID not set in env")
 
     except Exception as e:
         logger.error(f"Scheduled job {schedule_id} failed: {e}")
