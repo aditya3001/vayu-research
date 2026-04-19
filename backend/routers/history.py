@@ -60,10 +60,22 @@ def save_to_notion(item_id: int, db: Session = Depends(get_db)):
     from notifier import send_notion
     from datetime import datetime
     title = f"{h.prompt_name} — {h.created_at.strftime('%Y-%m-%d') if h.created_at else datetime.utcnow().strftime('%Y-%m-%d')}"
-    ok = send_notion(token, page_id, title, h.result)
+    ok, err = send_notion(token, page_id, title, h.result)
     if not ok:
-        raise HTTPException(status_code=500, detail="Failed to save to Notion. Check your token and page ID in Settings.")
+        raise HTTPException(status_code=500, detail=err or "Failed to save to Notion.")
     return {"ok": True}
+
+@router.get("/notion/test")
+def test_notion(db: Session = Depends(get_db)):
+    import os
+    from notifier import test_notion_connection
+    token = os.environ.get("NOTION_TOKEN")
+    page_id = os.environ.get("NOTION_PAGE_ID") or get_setting(db, "notion_page_id")
+    if not token:
+        raise HTTPException(status_code=400, detail="NOTION_TOKEN not set in environment.")
+    if not page_id:
+        raise HTTPException(status_code=400, detail="Notion page ID not set. Add NOTION_PAGE_ID to .env or set it in Settings.")
+    return test_notion_connection(token, page_id)
 
 @router.get("/history/{item_id}/download")
 def download_history(item_id: int, db: Session = Depends(get_db)):

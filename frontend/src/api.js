@@ -18,3 +18,4 @@ export const toggleSchedule = (id) => api.patch(`/schedules/${id}/toggle`).then(
 export const getSettings = () => api.get('/settings').then(r => r.data)
 export const updateSettings = (data) => api.put('/settings', data).then(r => r.data)
 export const getConfig = () => api.get('/config').then(r => r.data)
+export const testNotion = () => api.get('/notion/test').then(r => r.data)

@@ -83,6 +83,6 @@ def run_prompt(req: RunRequest, db: Session = Depends(get_db)):
             from notifier import send_notion
             from datetime import datetime
             title = f"{prompt['name']} — {datetime.utcnow().strftime('%Y-%m-%d')}"
-            notion_saved = send_notion(notion_token, notion_page_id, title, result)
+            notion_saved, _ = send_notion(notion_token, notion_page_id, title, result)
 
     return {"result": result, "history_id": entry.id, "model": model, "provider": provider, "notion_saved": notion_saved}

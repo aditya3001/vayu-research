@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getSettings, updateSettings, getConfig } from '../api'
+import { getSettings, updateSettings, getConfig, testNotion } from '../api'
 
 const STYLES = `
   @keyframes s-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -27,6 +27,8 @@ const ConnectedDot = ({ active }) => (
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({ notion_page_id: '', notion_page_id_from_env: false, auto_save_notion: false, notion_configured: false, email_configured: false, email_enabled: true, telegram_configured: false, telegram_enabled: true })
+  const [notionTest, setNotionTest] = useState(null)   // null | 'testing' | {ok, error?, page_title?}
+
   const [activeConfig, setActiveConfig] = useState(null)
   const [saved, setSaved] = useState(false)
 
@@ -143,6 +145,29 @@ export default function SettingsPage() {
                     />
                     {!settings.notion_page_id_from_env && (
                       <p style={{ color: '#333', fontSize: '11px', margin: '5px 0 0' }}>Or set NOTION_PAGE_ID in .env to configure server-side.</p>
+                    )}
+                  </div>
+
+                  {/* Test connection */}
+                  <div style={{ marginBottom: '10px' }}>
+                    <button
+                      onClick={async () => {
+                        setNotionTest('testing')
+                        try { setNotionTest(await testNotion()) }
+                        catch (e) { setNotionTest({ ok: false, error: e.response?.data?.detail || e.message }) }
+                      }}
+                      style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', color: '#777', padding: '7px 14px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                    >
+                      {notionTest === 'testing' ? 'Testing...' : 'Test Connection'}
+                    </button>
+                    {notionTest && notionTest !== 'testing' && (
+                      <div style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '4px', fontSize: '12px', lineHeight: '1.5', animation: 's-fade 0.2s ease',
+                        background: notionTest.ok ? '#0a1a0a' : '#1a0808',
+                        border: `1px solid ${notionTest.ok ? '#1a3a1a' : '#3a1515'}`,
+                        color: notionTest.ok ? '#4caf50' : '#ff6b6b'
+                      }}>
+                        {notionTest.ok ? `✓ Connected — "${notionTest.page_title}"` : `✗ ${notionTest.error}`}
+                      </div>
                     )}
                   </div>
 

@@ -31,13 +31,47 @@ def send_telegram(bot_token: str, chat_id: str, text: str):
     except Exception as e:
         logger.error(f"Telegram failed: {e}")
 
-def send_notion(token: str, page_id: str, title: str, content: str) -> bool:
+def _notion_headers(token: str) -> dict:
+    return {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28",
+    }
+
+def _normalize_page_id(page_id: str) -> str:
+    """Notion page IDs work with or without hyphens, but normalize to no-hyphen form."""
+    return page_id.strip().replace("-", "").strip("/").split("/")[-1].split("?")[0]
+
+def test_notion_connection(token: str, page_id: str) -> dict:
+    """Returns {"ok": True} or {"ok": False, "error": "human readable reason"}."""
     try:
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Notion-Version": "2022-06-28",
-        }
+        pid = _normalize_page_id(page_id)
+        resp = requests.get(
+            f"https://api.notion.com/v1/pages/{pid}",
+            headers=_notion_headers(token),
+            timeout=10
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            title_parts = data.get("properties", {}).get("title", {}).get("title", [])
+            page_title = title_parts[0]["plain_text"] if title_parts else "(untitled)"
+            return {"ok": True, "page_title": page_title}
+        elif resp.status_code == 401:
+            return {"ok": False, "error": "Invalid token. Check NOTION_TOKEN in your .env."}
+        elif resp.status_code == 403:
+            return {"ok": False, "error": "Integration does not have access to this page. Open the page in Notion → ··· menu → Connections → add your integration."}
+        elif resp.status_code == 404:
+            return {"ok": False, "error": "Page not found. Check NOTION_PAGE_ID — copy the 32-char ID from the page URL, not the full URL."}
+        else:
+            return {"ok": False, "error": f"Notion returned {resp.status_code}: {resp.text[:200]}"}
+    except Exception as e:
+        return {"ok": False, "error": f"Could not reach Notion API: {e}"}
+
+def send_notion(token: str, page_id: str, title: str, content: str) -> tuple[bool, str]:
+    """Returns (success, error_message). error_message is empty on success."""
+    try:
+        pid = _normalize_page_id(page_id)
+        headers = _notion_headers(token)
         MAX_BLOCK = 1900
         children = [{
             "object": "block",
@@ -54,14 +88,16 @@ def send_notion(token: str, page_id: str, title: str, content: str) -> bool:
                     "type": "paragraph",
                     "paragraph": {"rich_text": [{"type": "text", "text": {"content": chunk}}]}
                 })
-        # Notion limits 100 children per request — batch if needed
         BATCH = 100
-        url = f"https://api.notion.com/v1/blocks/{page_id}/children"
+        url = f"https://api.notion.com/v1/blocks/{pid}/children"
         for i in range(0, len(children), BATCH):
             resp = requests.patch(url, headers=headers, json={"children": children[i:i+BATCH]}, timeout=15)
-            resp.raise_for_status()
+            if not resp.ok:
+                err = resp.json().get("message", resp.text[:200])
+                logger.error(f"Notion API error {resp.status_code}: {err}")
+                return False, f"Notion error {resp.status_code}: {err}"
         logger.info(f"Notion saved: {title}")
-        return True
+        return True, ""
     except Exception as e:
         logger.error(f"Notion failed: {e}")
-        return False
+        return False, str(e)
