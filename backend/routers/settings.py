@@ -33,7 +33,12 @@ def get_settings(db: Session = Depends(get_db)):
 def get_config():
     import config as cfg
     provider, model = cfg.resolve_model()
-    return {"provider": provider, "model": model}
+    return {
+        "provider": provider,
+        "model": model,
+        "live_mode": cfg.LIVE_MODE,
+        "category_config": cfg.CATEGORY_CONFIG,
+    }
 
 @router.put("/settings")
 def update_settings(payload: SettingsPayload, db: Session = Depends(get_db)):

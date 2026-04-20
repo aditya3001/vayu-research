@@ -1,0 +1,32 @@
+{
+  "market-intelligence": {
+    "provider": "openrouter",
+    "live_model": "perplexity/sonar",
+    "demo_model": "openrouter/free",
+    "notion_page_id": "34854e21b95680d39e23ebb4308c70df"
+  },
+  "fundamental-research": {
+    "provider": "openrouter",
+    "live_model": "perplexity/sonar-pro",
+    "demo_model": "openrouter/free",
+    "notion_page_id": "34854e21b956804b8c09ffbd142e44af"
+  },
+  "advanced": {
+    "provider": "openrouter",
+    "live_model": "perplexity/sonar",
+    "demo_model": "openrouter/free",
+    "notion_page_id": ""
+  },
+  "quick-tools": {
+    "provider": "openrouter",
+    "live_model": "perplexity/sonar",
+    "demo_model": "openrouter/free",
+    "notion_page_id": ""
+  },
+  "visual-design": {
+    "provider": "openrouter",
+    "live_model": "perplexity/sonar",
+    "demo_model": "openrouter/free",
+    "notion_page_id": ""
+  }
+}

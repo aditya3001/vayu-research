@@ -84,6 +84,45 @@ def test_notion(db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Notion page ID not set. Add NOTION_PAGE_ID to .env or set it in Settings.")
     return test_notion_connection(token, page_id)
 
+@router.get("/notion/test-dbs")
+def test_notion_dbs():
+    import config as cfg
+    import requests
+    token = cfg.NOTION_TOKEN
+    if not token:
+        raise HTTPException(status_code=400, detail="NOTION_TOKEN not set in environment.")
+    results = {}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Notion-Version": cfg.NOTION_API_VERSION,
+    }
+    for category, cat_cfg in cfg.CATEGORY_CONFIG.items():
+        page_id = cat_cfg.get("notion_page_id", "").strip()
+        if not page_id:
+            results[category] = {"ok": None, "error": "not configured"}
+            continue
+        clean_id = page_id.replace("-", "").strip("/").split("/")[-1].split("?")[0]
+        try:
+            resp = requests.get(
+                f"https://api.notion.com/v1/pages/{clean_id}",
+                headers=headers,
+                timeout=cfg.NOTION_TIMEOUT,
+            )
+            if resp.status_code == 200:
+                title_parts = resp.json().get("properties", {}).get("title", {}).get("title", [])
+                page_title = title_parts[0]["plain_text"] if title_parts else "(untitled)"
+                results[category] = {"ok": True, "title": page_title}
+            elif resp.status_code == 404:
+                results[category] = {"ok": False, "error": "Page not found — check the ID and share it with your integration"}
+            elif resp.status_code == 403:
+                results[category] = {"ok": False, "error": "Integration lacks access — open the page in Notion → ··· → Connections → add your integration"}
+            else:
+                msg = resp.json().get("message", resp.text[:150])
+                results[category] = {"ok": False, "error": f"Notion {resp.status_code}: {msg}"}
+        except Exception as e:
+            results[category] = {"ok": False, "error": str(e)}
+    return results
+
 @router.get("/history/{item_id}/download")
 def download_history(item_id: int, db: Session = Depends(get_db)):
     h = db.query(History).filter(History.id == item_id).first()

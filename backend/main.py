@@ -1,6 +1,14 @@
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-5s | %(name)-12s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("main")
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -11,6 +19,11 @@ from database import engine, run_migrations
 import models
 models.Base.metadata.create_all(bind=engine)
 run_migrations()
+
+import config
+logger.info(f"Starting Vayu Research — provider={config.DEFAULT_PROVIDER} live_mode={config.LIVE_MODE}")
+provider, model = config.resolve_model()
+logger.info(f"Active model: {provider}/{model}")
 
 from scheduler import start_scheduler
 

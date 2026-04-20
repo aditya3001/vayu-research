@@ -1,25 +1,79 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 from typing import Optional
-import json
+import json, re
 from database import get_db
 from models import Schedule
 from scheduler import register_schedule, unregister_schedule
 
 router = APIRouter()
 
+VALID_FREQUENCIES = {"daily", "weekdays", "weekly"}
+VALID_DAYS        = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"}
+VALID_PROVIDERS   = {"anthropic", "openai", "openrouter"}
+_TIME_RE          = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
+
+
 class ScheduleCreate(BaseModel):
     prompt_id: str
     prompt_name: str
     inputs: dict
-    frequency: str  # daily | weekdays | weekly
+    frequency: str
     day_of_week: Optional[str] = None
-    run_time: str   # "08:00"
+    run_time: str
     provider: Optional[str] = None
     model_name: Optional[str] = None
     notify_email: bool = False
     notify_telegram: bool = False
+
+    @field_validator("prompt_id", "prompt_name")
+    @classmethod
+    def nonempty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("must not be empty")
+        return v.strip()
+
+    @field_validator("frequency")
+    @classmethod
+    def frequency_valid(cls, v: str) -> str:
+        if v not in VALID_FREQUENCIES:
+            raise ValueError(f"must be one of {sorted(VALID_FREQUENCIES)}")
+        return v
+
+    @field_validator("run_time")
+    @classmethod
+    def run_time_valid(cls, v: str) -> str:
+        if not _TIME_RE.match(v):
+            raise ValueError("must be HH:MM in 24-hour format (e.g. 08:30)")
+        return v
+
+    @field_validator("day_of_week")
+    @classmethod
+    def day_of_week_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v.lower() not in VALID_DAYS:
+            raise ValueError(f"must be one of {sorted(VALID_DAYS)}")
+        return v.lower() if v else v
+
+    @field_validator("provider")
+    @classmethod
+    def provider_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in VALID_PROVIDERS:
+            raise ValueError(f"must be one of {sorted(VALID_PROVIDERS)}")
+        return v
+
+    @field_validator("inputs")
+    @classmethod
+    def inputs_valid(cls, v: dict) -> dict:
+        for key, val in v.items():
+            if not isinstance(val, str):
+                raise ValueError(f"input value for '{key}' must be a string")
+        return v
+
+    def model_post_init(self, __context) -> None:
+        if self.frequency == "weekly" and not self.day_of_week:
+            raise ValueError("day_of_week is required when frequency is 'weekly'")
+
 
 class ScheduleUpdate(BaseModel):
     inputs: Optional[dict] = None
@@ -30,6 +84,35 @@ class ScheduleUpdate(BaseModel):
     model_name: Optional[str] = None
     notify_email: Optional[bool] = None
     notify_telegram: Optional[bool] = None
+
+    @field_validator("frequency")
+    @classmethod
+    def frequency_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in VALID_FREQUENCIES:
+            raise ValueError(f"must be one of {sorted(VALID_FREQUENCIES)}")
+        return v
+
+    @field_validator("run_time")
+    @classmethod
+    def run_time_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not _TIME_RE.match(v):
+            raise ValueError("must be HH:MM in 24-hour format (e.g. 08:30)")
+        return v
+
+    @field_validator("day_of_week")
+    @classmethod
+    def day_of_week_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v.lower() not in VALID_DAYS:
+            raise ValueError(f"must be one of {sorted(VALID_DAYS)}")
+        return v.lower() if v else v
+
+    @field_validator("provider")
+    @classmethod
+    def provider_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in VALID_PROVIDERS:
+            raise ValueError(f"must be one of {sorted(VALID_PROVIDERS)}")
+        return v
+
 
 def _serialize(s: Schedule) -> dict:
     return {
@@ -50,9 +133,11 @@ def _serialize(s: Schedule) -> dict:
         "created_at": s.created_at.isoformat() if s.created_at else None
     }
 
+
 @router.get("/schedules")
 def list_schedules(db: Session = Depends(get_db)):
     return [_serialize(s) for s in db.query(Schedule).order_by(Schedule.created_at.desc()).all()]
+
 
 @router.post("/schedules")
 def create_schedule(payload: ScheduleCreate, db: Session = Depends(get_db)):
@@ -75,12 +160,13 @@ def create_schedule(payload: ScheduleCreate, db: Session = Depends(get_db)):
     register_schedule(s)
     return _serialize(s)
 
+
 @router.put("/schedules/{schedule_id}")
 def update_schedule(schedule_id: int, payload: ScheduleUpdate, db: Session = Depends(get_db)):
     s = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not s:
         raise HTTPException(status_code=404, detail="Not found")
-    for field, value in payload.dict(exclude_none=True).items():
+    for field, value in payload.model_dump(exclude_none=True).items():
         if field == "inputs":
             setattr(s, field, json.dumps(value))
         else:
@@ -89,6 +175,7 @@ def update_schedule(schedule_id: int, payload: ScheduleUpdate, db: Session = Dep
     db.refresh(s)
     register_schedule(s)
     return _serialize(s)
+
 
 @router.delete("/schedules/{schedule_id}")
 def delete_schedule(schedule_id: int, db: Session = Depends(get_db)):
@@ -99,6 +186,7 @@ def delete_schedule(schedule_id: int, db: Session = Depends(get_db)):
     db.delete(s)
     db.commit()
     return {"ok": True}
+
 
 @router.patch("/schedules/{schedule_id}/toggle")
 def toggle_schedule(schedule_id: int, db: Session = Depends(get_db)):

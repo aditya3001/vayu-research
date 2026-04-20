@@ -72,13 +72,74 @@ def _rich_text(text: str) -> list:
                 parts.append({"type": "text", "text": {"content": seg[i:i+2000]}})
     return parts or [{"type": "text", "text": {"content": ""}}]
 
+def _is_table_row(line: str) -> bool:
+    s = line.strip()
+    return s.startswith('|') and s.endswith('|') and len(s) > 1
+
+def _is_separator_row(line: str) -> bool:
+    s = line.strip()
+    if not _is_table_row(line):
+        return False
+    cells = [c.strip() for c in s[1:-1].split('|')]
+    return all(re.match(r'^[-: ]+$', c) for c in cells if c)
+
+def _parse_table_cells(line: str) -> list[str]:
+    s = line.strip()
+    return [c.strip() for c in s[1:-1].split('|')]
+
+def _table_block(rows: list[str]) -> dict:
+    """Convert a list of raw markdown table lines into a Notion table block."""
+    data_rows = [r for r in rows if not _is_separator_row(r)]
+    if not data_rows:
+        return None
+    has_header = len(rows) > 1 and _is_separator_row(rows[1])
+    table_width = max(len(_parse_table_cells(r)) for r in data_rows)
+    notion_rows = []
+    for row in data_rows:
+        cells = _parse_table_cells(row)
+        # Pad short rows, trim long rows
+        cells = (cells + [''] * table_width)[:table_width]
+        notion_rows.append({
+            "object": "block",
+            "type": "table_row",
+            "table_row": {"cells": [_rich_text(c) for c in cells]},
+        })
+    return {
+        "object": "block",
+        "type": "table",
+        "table": {
+            "table_width": table_width,
+            "has_column_header": has_header,
+            "has_row_header": False,
+            "children": notion_rows,
+        },
+    }
+
 def _md_to_notion_blocks(md: str) -> list:
     """Convert markdown text to a list of Notion block objects."""
     blocks = []
-    for line in md.split('\n'):
+    lines = md.split('\n')
+    i = 0
+    while i < len(lines):
+        line = lines[i]
         s = line.strip()
+
         if not s:
+            i += 1
             continue
+
+        # ── Table ──────────────────────────────────────────────────────────
+        if _is_table_row(line):
+            table_lines = []
+            while i < len(lines) and _is_table_row(lines[i]):
+                table_lines.append(lines[i])
+                i += 1
+            block = _table_block(table_lines)
+            if block:
+                blocks.append(block)
+            continue
+
+        # ── Headings ───────────────────────────────────────────────────────
         if s.startswith('### '):
             blocks.append({"object": "block", "type": "heading_3", "heading_3": {"rich_text": _rich_text(s[4:])}})
         elif s.startswith('## '):
@@ -93,6 +154,8 @@ def _md_to_notion_blocks(md: str) -> list:
             blocks.append({"object": "block", "type": "divider", "divider": {}})
         else:
             blocks.append({"object": "block", "type": "paragraph", "paragraph": {"rich_text": _rich_text(s)}})
+        i += 1
+
     return blocks
 
 def test_notion_connection(token: str, page_id: str) -> dict:
@@ -119,6 +182,80 @@ def test_notion_connection(token: str, page_id: str) -> dict:
             return {"ok": False, "error": f"Notion returned {resp.status_code}: {resp.text[:200]}"}
     except Exception as e:
         return {"ok": False, "error": f"Could not reach Notion API: {e}"}
+
+def send_notion_db_entry(
+    token: str,
+    db_id: str,
+    title: str,
+    content: str,
+    metadata: dict | None = None,
+) -> tuple[bool, str]:
+    """
+    Create a new row in a Notion database.
+    The DB must have a title property named 'Name'.
+    Optional DB properties used if present: Date (date), Model (rich_text),
+    Category (select), Source (select), Inputs (rich_text).
+    Returns (success, error_message).
+    """
+    try:
+        did = _normalize_page_id(db_id)
+        headers = _notion_headers(token)
+        md = metadata or {}
+
+        properties: dict = {
+            "Name": {"title": [{"type": "text", "text": {"content": title[:2000]}}]},
+        }
+
+        children = []
+        if md:
+            meta_text = "\n".join(f"{k}: {v}" for k, v in md.items() if v)
+            if meta_text:
+                children.append({
+                    "object": "block",
+                    "type": "callout",
+                    "callout": {
+                        "rich_text": [{"type": "text", "text": {"content": meta_text}}],
+                        "icon": {"type": "emoji", "emoji": "📋"},
+                        "color": "gray_background",
+                    },
+                })
+                children.append({"object": "block", "type": "divider", "divider": {}})
+        children.extend(_md_to_notion_blocks(content))
+        BATCH = 100
+        page_body = {
+            "parent": {"database_id": did},
+            "properties": properties,
+            "children": children[:BATCH],
+        }
+        resp = requests.post(
+            "https://api.notion.com/v1/pages",
+            headers=headers,
+            json=page_body,
+            timeout=config.NOTION_TIMEOUT,
+        )
+        if not resp.ok:
+            err = resp.json().get("message", resp.text[:200])
+            logger.error(f"Notion DB entry error {resp.status_code}: {err}")
+            return False, f"Notion error {resp.status_code}: {err}"
+
+        new_page_id = resp.json()["id"]
+        for i in range(BATCH, len(children), BATCH):
+            r2 = requests.patch(
+                f"https://api.notion.com/v1/blocks/{new_page_id}/children",
+                headers=headers,
+                json={"children": children[i:i+BATCH]},
+                timeout=config.NOTION_TIMEOUT,
+            )
+            if not r2.ok:
+                err = r2.json().get("message", r2.text[:200])
+                return False, f"Notion error appending blocks: {err}"
+
+        logger.info(f"Notion DB entry created: {title}")
+        return True, ""
+    except Exception as e:
+        logger.error(f"Notion DB entry failed: {e}")
+        return False, str(e)
+
 
 def send_notion_page(
     token: str,

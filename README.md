@@ -9,10 +9,12 @@ Built around the **Vayu Capital AI Prompt Library** — 20 hand-crafted prompts 
 ## Features
 
 - **Prompt Runner** — Fill in placeholders, submit to your chosen model, view formatted markdown output
-- **History** — Every run saved to SQLite; searchable, downloadable as `.md` with YAML frontmatter
+- **History** — Every run saved to database; downloadable as `.md` with YAML frontmatter
 - **Schedules** — Cron-based automation; auto-deliver results via Email or Telegram
-- **Notion** — Save any result to a Notion page, manually or automatically after each run
+- **Notion** — Save results as child pages under category-specific parent pages, manually or automatically
 - **Multi-provider** — Switch between Anthropic, OpenAI, and OpenRouter from a single env var
+- **Live / Demo mode** — Toggle between paid and free models per category via `LIVE_MODE` in `.env`
+- **Per-category model routing** — Each prompt category maps to its own live and demo model via `category_config.json`
 - **Settings** — Runtime toggles for notifications; integration status at a glance
 
 ## Prompt Categories
@@ -71,46 +73,69 @@ npm run dev   # → http://localhost:5173
 
 ## Configuration
 
-All configuration lives in `.env`. See [`.env.example`](.env.example) for every variable with documentation.
+All configuration lives in `backend/.env`. See [`.env.example`](.env.example) for every variable with documentation.
 
 ### Minimum setup (pick one provider)
 
 ```env
 # OpenRouter — recommended, access to every model with one key
 DEFAULT_PROVIDER=openrouter
-DEFAULT_MODEL=anthropic/claude-opus-4-6
 OPENROUTER_API_KEY=sk-or-...
 
 # Or Anthropic directly
 DEFAULT_PROVIDER=anthropic
-DEFAULT_MODEL=claude-opus-4-6
 ANTHROPIC_API_KEY=sk-ant-...
 
 # Or OpenAI
 DEFAULT_PROVIDER=openai
-DEFAULT_MODEL=gpt-4o
 OPENAI_API_KEY=sk-...
 ```
 
-### OpenRouter free models
+### Live / Demo mode
 
-Append `:free` to any supported model:
+Controls which model tier is used when no per-request model is specified:
 
 ```env
-DEFAULT_MODEL=meta-llama/llama-4-maverick:free
-DEFAULT_MODEL=deepseek/deepseek-r1:free
-DEFAULT_MODEL=google/gemini-2.5-pro:free
+LIVE_MODE=live    # uses DEFAULT_LIVE_MODEL (paid)
+LIVE_MODE=demo    # uses DEFAULT_DEMO_MODEL (free)
+
+DEFAULT_LIVE_MODEL=perplexity/sonar-pro
+DEFAULT_DEMO_MODEL=openrouter/free
 ```
 
-Browse all models at [openrouter.ai/models](https://openrouter.ai/models).
+Per-category overrides in `backend/data/category_config.json` take priority over these defaults.
+
+### Per-category model routing
+
+Each prompt category can specify its own `live_model` and `demo_model` in `backend/data/category_config.json`:
+
+```json
+{
+  "market-intelligence": {
+    "provider": "openrouter",
+    "live_model": "perplexity/sonar-pro",
+    "demo_model": "openrouter/free",
+    "notion_page_id": ""
+  }
+}
+```
+
+Model resolution order: per-request override → category config → `LIVE_MODE` global default.
+
+### Notion integration
+
+Each category can save results as child pages under its own parent Notion page. Set `notion_page_id` per category in `category_config.json`, or set the global fallback:
+
+```env
+NOTION_TOKEN=secret_...
+NOTION_PAGE_ID=32-char-id-from-page-url
+```
+
+Share each page with your Notion integration via the page's ··· menu → Connections.
 
 ### Optional integrations
 
 ```env
-# Notion
-NOTION_TOKEN=secret_...
-NOTION_PAGE_ID=32-char-id-from-page-url
-
 # Email (Gmail)
 GMAIL_ADDRESS=you@gmail.com
 GMAIL_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
@@ -142,18 +167,20 @@ uvicorn main:app --host 0.0.0.0 --port $PORT
 
 ```
 vayu-research/
-├── .env.example          # All config variables documented
+├── .env.example               # All config variables documented
 ├── backend/
-│   ├── config.py         # Central env-var config with typed defaults
-│   ├── main.py           # FastAPI app + static file serving
-│   ├── models.py         # History, Schedule, Setting ORM models
-│   ├── scheduler.py      # APScheduler — cron jobs, LLM calls, notifications
-│   ├── notifier.py       # Email, Telegram, Notion delivery
-│   ├── data/prompts.json # All prompts with metadata and placeholder definitions
-│   └── routers/          # API routes: prompts, run, history, schedules, settings
+│   ├── config.py              # Central env-var config with typed defaults
+│   ├── main.py                # FastAPI app + static file serving
+│   ├── models.py              # History, Schedule, Setting ORM models
+│   ├── scheduler.py           # APScheduler — cron jobs, LLM calls, notifications
+│   ├── notifier.py            # Email, Telegram, Notion delivery + markdown→Notion blocks
+│   ├── data/
+│   │   ├── prompts.json       # All prompts with metadata and placeholder definitions
+│   │   └── category_config.json  # Per-category model and Notion page mapping
+│   └── routers/               # API routes: prompts, run, history, schedules, settings
 └── frontend/
     └── src/
-        ├── components/   # PromptRunner, HistoryPage, SchedulesPage, SettingsPage
-        ├── api.js        # Axios API layer
-        └── index.css     # Global styles + markdown prose theme
+        ├── components/        # PromptRunner, HistoryPage, SchedulesPage, SettingsPage
+        ├── api.js             # Axios API layer
+        └── index.css          # Global styles + markdown prose theme
 ```

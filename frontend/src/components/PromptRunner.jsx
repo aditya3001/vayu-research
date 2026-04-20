@@ -99,7 +99,8 @@ export default function PromptRunner() {
   const [prompt, setPrompt] = useState(null)
   const [inputs, setInputs] = useState({})
   const [rawDates, setRawDates] = useState({})  // YYYY-MM-DD for date picker values
-  const [activeModel, setActiveModel] = useState(null)   // { provider, model } from settings
+  const [fullConfig, setFullConfig] = useState(null)      // full /config response
+  const [activeModel, setActiveModel] = useState(null)   // { provider, model } resolved for this prompt
   const [result, setResult] = useState('')
   const [usedModel, setUsedModel] = useState(null)       // { provider, model } from last run response
   const [historyId, setHistoryId] = useState(null)
@@ -126,7 +127,19 @@ export default function PromptRunner() {
   }, [promptId])
 
   useEffect(() => {
-    getConfig().then(c => setActiveModel({ provider: c.provider, model: c.model }))
+    if (!fullConfig) return
+    const cat = prompt?.category || ''
+    const catCfg = fullConfig.category_config?.[cat]
+    const catModel = fullConfig.live_mode === 'live' ? catCfg?.live_model : catCfg?.demo_model
+    if (catModel) {
+      setActiveModel({ provider: catCfg.provider || fullConfig.provider, model: catModel })
+    } else {
+      setActiveModel({ provider: fullConfig.provider, model: fullConfig.model })
+    }
+  }, [prompt, fullConfig])
+
+  useEffect(() => {
+    getConfig().then(c => setFullConfig(c))
   }, [])
 
   const startTimer = () => {
