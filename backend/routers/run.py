@@ -91,9 +91,14 @@ def run_prompt(req: RunRequest, db: Session = Depends(get_db)):
         notion_token = config.NOTION_TOKEN
         notion_page_id = config.NOTION_PAGE_ID or get_setting(db, "notion_page_id")
         if notion_token and notion_page_id:
-            from notifier import send_notion
+            from notifier import send_notion_page
             from datetime import datetime
-            title = f"{prompt['name']} — {datetime.utcnow().strftime('%Y-%m-%d')} — {model}"
-            notion_saved, _ = send_notion(notion_token, notion_page_id, title, result)
+            date_str = datetime.utcnow().strftime('%Y-%m-%d')
+            title = f"{prompt['name']} — {date_str}"
+            inputs_summary = ", ".join(f"{k}: {v}" for k, v in req.inputs.items() if v)
+            notion_saved, _ = send_notion_page(
+                notion_token, notion_page_id, title, result,
+                metadata={"Date": date_str, "Model": f"{provider}/{model}", "Source": "manual", "Inputs": inputs_summary},
+            )
 
     return {"result": result, "history_id": entry.id, "model": model, "provider": provider, "notion_saved": notion_saved}

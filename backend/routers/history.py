@@ -59,12 +59,15 @@ def save_to_notion(item_id: int, db: Session = Depends(get_db)):
     page_id = cfg.NOTION_PAGE_ID or get_setting(db, "notion_page_id")
     if not token or not page_id:
         raise HTTPException(status_code=400, detail="Notion not configured. Add token and page ID in Settings.")
-    from notifier import send_notion
+    from notifier import send_notion_page
     from datetime import datetime
     date_label = h.created_at.strftime('%Y-%m-%d') if h.created_at else datetime.utcnow().strftime('%Y-%m-%d')
-    model_label = f" — {h.model_used}" if h.model_used else ""
-    title = f"{h.prompt_name} — {date_label}{model_label}"
-    ok, err = send_notion(token, page_id, title, h.result)
+    title = f"{h.prompt_name} — {date_label}"
+    inputs_summary = ", ".join(f"{k}: {v}" for k, v in json.loads(h.inputs).items() if v)
+    ok, err = send_notion_page(
+        token, page_id, title, h.result,
+        metadata={"Date": date_label, "Model": h.model_used or "", "Source": h.source, "Inputs": inputs_summary},
+    )
     if not ok:
         raise HTTPException(status_code=500, detail=err or "Failed to save to Notion.")
     return {"ok": True}

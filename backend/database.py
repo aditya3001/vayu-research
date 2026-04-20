@@ -3,7 +3,21 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from config import DATABASE_URL
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+_is_postgres = DATABASE_URL.startswith("postgresql") or DATABASE_URL.startswith("postgres")
+
+if _is_postgres:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,      # drop stale connections (important for Supabase)
+        pool_size=5,
+        max_overflow=10,
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},  # SQLite only
+    )
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
