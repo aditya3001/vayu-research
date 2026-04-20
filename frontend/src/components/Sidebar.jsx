@@ -1,46 +1,56 @@
 import { NavLink } from 'react-router-dom'
 
-const linkStyle = (active) => ({
-  display: 'block',
-  padding: '6px 10px',
+const link = (active) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  padding: '8px 10px',
   marginBottom: '2px',
-  borderRadius: '4px',
-  color: active ? '#fff' : '#888',
-  background: active ? '#1e1e1e' : 'transparent',
-  borderLeft: active ? '2px solid #c9a96e' : '2px solid transparent',
+  borderRadius: '5px',
+  color: active ? '#fff' : '#555',
+  background: active ? '#1a1a1a' : 'transparent',
+  borderLeft: `2px solid ${active ? '#c9a96e' : 'transparent'}`,
   textDecoration: 'none',
   fontSize: '13px',
   cursor: 'pointer',
+  transition: 'all 0.15s',
 })
 
-export default function Sidebar({ categories }) {
+export default function Sidebar() {
   return (
-    <div style={{ width: '200px', background: '#111', borderRight: '1px solid #222', padding: '16px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ fontWeight: 700, color: '#c9a96e', marginBottom: '20px', fontSize: '14px', letterSpacing: '1px' }}>
-        VAYU RESEARCH
+    <div style={{
+      width: '180px',
+      background: '#0a0a0a',
+      borderRight: '1px solid #1a1a1a',
+      padding: '20px 12px',
+      flexShrink: 0,
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {/* Logo */}
+      <div style={{ marginBottom: '28px', padding: '0 4px' }}>
+        <div style={{ color: '#c9a96e', fontWeight: 700, fontSize: '13px', letterSpacing: '1.5px' }}>VAYU</div>
+        <div style={{ color: '#333', fontWeight: 400, fontSize: '10px', letterSpacing: '1px', marginTop: '1px' }}>RESEARCH</div>
       </div>
 
-      <div style={{ color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
-        Prompts
-      </div>
-
-      {categories.map(cat => (
-        <NavLink
-          key={cat.id}
-          to={`/category/${cat.id}`}
-          style={({ isActive }) => linkStyle(isActive)}
-        >
-          {cat.icon} {cat.label}
+      {/* Primary */}
+      <div style={{ flex: 1 }}>
+        <NavLink to="/" end style={({ isActive }) => link(isActive)}>
+          <span>✦</span> Library
         </NavLink>
-      ))}
+        <NavLink to="/history" style={({ isActive }) => link(isActive)}>
+          <span>◷</span> History
+        </NavLink>
+        <NavLink to="/schedules" style={({ isActive }) => link(isActive)}>
+          <span>⏱</span> Schedules
+        </NavLink>
+      </div>
 
-      <div style={{ borderTop: '1px solid #222', marginTop: 'auto', paddingTop: '16px' }}>
-        <div style={{ color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
-          Other
-        </div>
-        <NavLink to="/history" style={({ isActive }) => linkStyle(isActive)}>📁 History</NavLink>
-        <NavLink to="/schedules" style={({ isActive }) => linkStyle(isActive)}>🕐 Schedules</NavLink>
-        <NavLink to="/settings" style={({ isActive }) => linkStyle(isActive)}>⚙️ Settings</NavLink>
+      {/* Bottom */}
+      <div style={{ borderTop: '1px solid #1a1a1a', paddingTop: '12px' }}>
+        <NavLink to="/settings" style={({ isActive }) => link(isActive)}>
+          <span>⚙</span> Settings
+        </NavLink>
       </div>
     </div>
   )
