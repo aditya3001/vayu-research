@@ -36,87 +36,79 @@ export default function HistoryPage() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
-
+    <div className="history">
       {/* Left panel — list */}
-      <div style={{ width: '300px', flexShrink: 0, borderRight: '1px solid #1a1a1a', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '20px 16px 12px', borderBottom: '1px solid #1a1a1a' }}>
-          <h1 style={{ color: '#fff', fontSize: '16px', fontWeight: 600, margin: 0 }}>History</h1>
-          <p style={{ color: '#444', fontSize: '11px', marginTop: '3px' }}>{items.length} result{items.length !== 1 ? 's' : ''}</p>
+      <div className="history-list">
+        <div className="history-list-header">
+          <h1 className="page-title" style={{ fontSize: '16px' }}>History</h1>
+          <p className="page-sub" style={{ marginBottom: 0 }}>
+            {items.length} result{items.length !== 1 ? 's' : ''}
+          </p>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
+        <div className="history-items">
           {items.length === 0 && (
-            <p style={{ color: '#444', fontSize: '12px', padding: '16px 8px' }}>No history yet. Run a prompt to get started.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px', padding: 'var(--space-md) var(--space-sm)' }}>
+              No history yet. Run a prompt to get started.
+            </p>
           )}
           {items.map(h => (
             <div
               key={h.id}
+              className={'history-item' + (selected?.id === h.id ? ' selected' : '')}
               onClick={() => setSelected(h)}
-              style={{
-                padding: '10px 12px', borderRadius: '6px', cursor: 'pointer', marginBottom: '2px',
-                background: selected?.id === h.id ? '#161410' : 'transparent',
-                border: `1px solid ${selected?.id === h.id ? '#2a2010' : 'transparent'}`,
-                transition: 'all 0.1s',
-              }}
-              onMouseEnter={e => { if (selected?.id !== h.id) e.currentTarget.style.background = '#111' }}
-              onMouseLeave={e => { if (selected?.id !== h.id) e.currentTarget.style.background = 'transparent' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ color: selected?.id === h.id ? '#c9a96e' : '#ccc', fontWeight: 500, fontSize: '12px', marginBottom: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {h.prompt_name}
-                  </div>
-                  <div style={{ color: '#444', fontSize: '10px' }}>{fmt(h.created_at)}{h.model_used ? <span style={{ color: '#333', marginLeft: '4px' }}>· {h.model_used.split('/')[1] || h.model_used}</span> : ''}</div>
-                  {inputSummary(h.inputs) && (
-                    <div style={{ color: '#333', fontSize: '10px', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {inputSummary(h.inputs)}
-                    </div>
+              <div style={{ minWidth: 0 }}>
+                <div className="history-item-name">{h.prompt_name}</div>
+                <div className="history-item-meta">
+                  {fmt(h.created_at)}
+                  {h.model_used && (
+                    <span style={{ marginLeft: 'var(--space-xs)', color: 'var(--text-faint)' }}>
+                      · {h.model_used.split('/')[1] || h.model_used}
+                    </span>
                   )}
                 </div>
-                <button
-                  onClick={e => handleDelete(h.id, e)}
-                  style={{ flexShrink: 0, background: 'none', border: 'none', color: '#333', fontSize: '12px', cursor: 'pointer', padding: '2px 4px', borderRadius: '3px' }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#ff6b6b'}
-                  onMouseLeave={e => e.currentTarget.style.color = '#333'}
-                >✕</button>
+                {inputSummary(h.inputs) && (
+                  <div className="history-item-inputs">{inputSummary(h.inputs)}</div>
+                )}
               </div>
+              <button className="history-delete" onClick={e => handleDelete(h.id, e)}>✕</button>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Right panel — result */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Right panel — viewer */}
+      <div className="history-viewer">
         {selected ? (
           <>
-            <div style={{ padding: '16px 24px', borderBottom: '1px solid #1a1a1a', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+            <div className="history-viewer-header">
               <div>
-                <div style={{ color: '#fff', fontWeight: 600, fontSize: '14px' }}>{selected.prompt_name}</div>
-                <div style={{ color: '#444', fontSize: '11px', marginTop: '2px' }}>
-                {fmt(selected.created_at)}
-                {selected.model_used && <span style={{ background: '#1a1a1a', border: '1px solid #222', borderRadius: '3px', padding: '1px 6px', fontSize: '10px', color: '#555', fontFamily: 'monospace', marginLeft: '8px' }}>{selected.model_used}</span>}
-                {inputSummary(selected.inputs) ? ' · ' + inputSummary(selected.inputs) : ''}
+                <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
+                  {selected.prompt_name}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  {fmt(selected.created_at)}
+                  {selected.model_used && (
+                    <span className="model-badge">{selected.model_used}</span>
+                  )}
+                  {inputSummary(selected.inputs) && (
+                    <span> · {inputSummary(selected.inputs)}</span>
+                  )}
+                </div>
               </div>
-              </div>
-              <a
-                href={downloadHistory(selected.id)}
-                download
-                style={{ background: '#111', border: '1px solid #222', color: '#666', padding: '6px 14px', borderRadius: '4px', fontSize: '11px', textDecoration: 'none' }}
-              >
+              <a className="download-btn" href={downloadHistory(selected.id)} download>
                 ⬇ Download .md
               </a>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
+            <div className="history-viewer-body">
               <div className="md">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{selected.result}</ReactMarkdown>
               </div>
             </div>
           </>
         ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333', fontSize: '13px' }}>
-            Select a result to view
-          </div>
+          <div className="history-empty">Select a result to view</div>
         )}
       </div>
     </div>
