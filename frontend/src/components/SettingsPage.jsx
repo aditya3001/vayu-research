@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getSettings, updateSettings, getConfig } from '../api'
 
-
 const Toggle = ({ checked, onChange }) => (
   <label className="s-toggle">
     <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
@@ -10,15 +9,17 @@ const Toggle = ({ checked, onChange }) => (
 )
 
 const ConnectedDot = ({ active }) => (
-  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: active ? '#4caf50' : '#444' }}>
-    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: active ? '#4caf50' : '#2a2a2a', display: 'inline-block', boxShadow: active ? '0 0 6px #4caf5066' : 'none' }} />
+  <span className={active ? 'status-connected' : 'status-disconnected'}>
     {active ? 'Connected' : 'Not configured'}
   </span>
 )
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({ notion_page_id: '', notion_page_id_from_env: false, auto_save_notion: false, notion_configured: false, email_configured: false, email_enabled: true, telegram_configured: false, telegram_enabled: true, openrouter_configured: false })
-
+  const [settings, setSettings] = useState({
+    notion_page_id: '', notion_page_id_from_env: false, auto_save_notion: false,
+    notion_configured: false, email_configured: false, email_enabled: true,
+    telegram_configured: false, telegram_enabled: true, openrouter_configured: false,
+  })
   const [activeConfig, setActiveConfig] = useState(null)
   const [saved, setSaved] = useState(false)
 
@@ -36,140 +37,143 @@ export default function SettingsPage() {
   }
 
   return (
-    <>
-      <div style={{ padding: '32px 28px', maxWidth: '520px', animation: 's-fade 0.25s ease' }}>
-        <h1 style={{ color: '#fff', fontSize: '18px', fontWeight: 600, margin: '0 0 4px' }}>Settings</h1>
-        <p style={{ color: '#383838', fontSize: '12px', margin: '0 0 32px' }}>
-          API keys and secrets live in <code style={{ background: '#1a1a1a', padding: '1px 5px', borderRadius: '3px', color: '#666' }}>.env</code> — only runtime preferences are here.
-        </p>
+    <div className="page" style={{ maxWidth: '560px' }}>
+      <h1 className="page-title">Settings</h1>
+      <p className="page-sub">
+        API keys live in{' '}
+        <code style={{ background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1px 5px', fontSize: '12px' }}>.env</code>
+        {' '}— only runtime preferences are here.
+      </p>
 
-        {/* Active Model */}
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '10px' }}>Active Model</div>
-          <div style={{ background: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: '8px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+      {/* Active Model */}
+      <div style={{ marginBottom: 'var(--space-lg)' }}>
+        <div className="settings-section-label">Active Model</div>
+        <div className="settings-card">
+          <div className="settings-row">
             {activeConfig ? (
-              <>
-                <span style={{ fontFamily: 'monospace', fontSize: '13px', color: '#c9a96e', fontWeight: 500 }}>{activeConfig.model}</span>
-                <span style={{ color: '#2a2a2a' }}>·</span>
-                <span style={{ color: '#444', fontSize: '12px' }}>{{ anthropic: 'Anthropic', openai: 'OpenAI', openrouter: 'OpenRouter' }[activeConfig.provider] || activeConfig.provider}</span>
-                <span style={{ marginLeft: 'auto', color: '#2a2a2a', fontSize: '10px', fontStyle: 'italic' }}>via DEFAULT_MODEL in .env</span>
-              </>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+                <span className="settings-model-chip">{activeConfig.model}</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                  {{ anthropic: 'Anthropic', openai: 'OpenAI', openrouter: 'OpenRouter' }[activeConfig.provider] || activeConfig.provider}
+                </span>
+                <span style={{ marginLeft: 'auto', color: 'var(--text-faint)', fontSize: '10px', fontStyle: 'italic' }}>
+                  via DEFAULT_MODEL in .env
+                </span>
+              </div>
             ) : (
-              <span style={{ color: '#333', fontSize: '12px' }}>Loading...</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Loading…</span>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Integrations */}
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '10px' }}>Integrations</div>
-          <div style={{ background: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: '8px', overflow: 'hidden' }}>
+      {/* Integrations */}
+      <div style={{ marginBottom: 'var(--space-lg)' }}>
+        <div className="settings-section-label">Integrations</div>
+        <div className="settings-card">
 
-            {/* Email */}
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid #1a1a1a' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: '#ccc', fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>Email</div>
-                  <div style={{ color: '#383838', fontSize: '11px' }}>GMAIL_ADDRESS + GMAIL_APP_PASSWORD</div>
-                </div>
-                {settings.email_configured
-                  ? <Toggle checked={settings.email_enabled} onChange={v => save({ email_enabled: v })} />
-                  : <ConnectedDot active={false} />
-                }
+          {/* Email */}
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="settings-row-info">
+                <div className="settings-row-title">Email</div>
+                <div className="settings-row-sub">GMAIL_ADDRESS + GMAIL_APP_PASSWORD</div>
               </div>
-              {settings.email_configured && !settings.email_enabled && (
-                <div style={{ marginTop: '8px', color: '#5a4a1a', fontSize: '11px', background: '#1a1500', borderRadius: '4px', padding: '5px 10px', animation: 's-fade 0.2s ease' }}>
-                  Notifications paused — scheduled runs will not send emails
-                </div>
-              )}
+              {settings.email_configured
+                ? <Toggle checked={settings.email_enabled} onChange={v => save({ email_enabled: v })} />
+                : <ConnectedDot active={false} />
+              }
+            </div>
+            {settings.email_configured && !settings.email_enabled && (
+              <div className="settings-notice warn" style={{ marginTop: 'var(--space-sm)', animation: 's-fade 0.2s ease' }}>
+                Notifications paused — scheduled runs will not send emails
+              </div>
+            )}
+          </div>
+
+          {/* Telegram */}
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="settings-row-info">
+                <div className="settings-row-title">Telegram</div>
+                <div className="settings-row-sub">TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID</div>
+              </div>
+              {settings.telegram_configured
+                ? <Toggle checked={settings.telegram_enabled} onChange={v => save({ telegram_enabled: v })} />
+                : <ConnectedDot active={false} />
+              }
+            </div>
+            {settings.telegram_configured && !settings.telegram_enabled && (
+              <div className="settings-notice warn" style={{ marginTop: 'var(--space-sm)', animation: 's-fade 0.2s ease' }}>
+                Notifications paused — scheduled runs will not send Telegram messages
+              </div>
+            )}
+          </div>
+
+          {/* OpenRouter */}
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="settings-row-info">
+                <div className="settings-row-title">OpenRouter</div>
+                <div className="settings-row-sub">OPENROUTER_API_KEY in .env — access any model</div>
+              </div>
+              <ConnectedDot active={settings.openrouter_configured} />
+            </div>
+            {settings.openrouter_configured && (
+              <div className="settings-notice" style={{ marginTop: 'var(--space-sm)' }}>
+                Set <code>DEFAULT_PROVIDER=openrouter</code> and <code>DEFAULT_MODEL=openrouter/auto</code> in .env to use auto-routing
+              </div>
+            )}
+          </div>
+
+          {/* Notion */}
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="settings-row-info">
+                <div className="settings-row-title">Notion</div>
+                <div className="settings-row-sub">NOTION_TOKEN in .env</div>
+              </div>
+              <ConnectedDot active={settings.notion_configured} />
             </div>
 
-            {/* Telegram */}
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid #1a1a1a' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: '#ccc', fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>Telegram</div>
-                  <div style={{ color: '#383838', fontSize: '11px' }}>TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID</div>
+            {settings.notion_configured && (
+              <div style={{ marginTop: 'var(--space-md)', animation: 's-fade 0.2s ease' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-xs)' }}>
+                  <label style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Page ID</label>
+                  {settings.notion_page_id_from_env && (
+                    <span style={{ fontSize: '10px', color: 'var(--text-faint)', fontStyle: 'italic' }}>via NOTION_PAGE_ID env var</span>
+                  )}
                 </div>
-                {settings.telegram_configured
-                  ? <Toggle checked={settings.telegram_enabled} onChange={v => save({ telegram_enabled: v })} />
-                  : <ConnectedDot active={false} />
-                }
-              </div>
-              {settings.telegram_configured && !settings.telegram_enabled && (
-                <div style={{ marginTop: '8px', color: '#5a4a1a', fontSize: '11px', background: '#1a1500', borderRadius: '4px', padding: '5px 10px', animation: 's-fade 0.2s ease' }}>
-                  Notifications paused — scheduled runs will not send Telegram messages
-                </div>
-              )}
-            </div>
+                <input
+                  className="settings-input"
+                  value={settings.notion_page_id || ''}
+                  onChange={e => !settings.notion_page_id_from_env && setSettings(s => ({ ...s, notion_page_id: e.target.value }))}
+                  onBlur={e => !settings.notion_page_id_from_env && save({ notion_page_id: e.target.value })}
+                  placeholder="32-char ID from page URL"
+                  readOnly={settings.notion_page_id_from_env}
+                />
+                {!settings.notion_page_id_from_env && (
+                  <p style={{ color: 'var(--text-faint)', fontSize: '11px', margin: '5px 0 var(--space-md)' }}>
+                    Or set NOTION_PAGE_ID in .env to configure server-side.
+                  </p>
+                )}
 
-            {/* OpenRouter */}
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid #1a1a1a' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: '#ccc', fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>OpenRouter</div>
-                  <div style={{ color: '#383838', fontSize: '11px' }}>OPENROUTER_API_KEY in .env — access any model</div>
-                </div>
-                <ConnectedDot active={settings.openrouter_configured} />
-              </div>
-              {settings.openrouter_configured && (
-                <div style={{ marginTop: '8px', color: '#3a5a3a', fontSize: '11px', background: '#0a1a0a', borderRadius: '4px', padding: '5px 10px' }}>
-                  Set <code style={{ color: '#c9a96e', background: 'transparent' }}>DEFAULT_PROVIDER=openrouter</code> and <code style={{ color: '#c9a96e', background: 'transparent' }}>DEFAULT_MODEL=openrouter/auto</code> in .env to use auto-routing
-                </div>
-              )}
-            </div>
-
-            {/* Notion */}
-            <div style={{ padding: '14px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: settings.notion_configured ? '12px' : '0' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: '#ccc', fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>Notion</div>
-                  <div style={{ color: '#383838', fontSize: '11px' }}>NOTION_TOKEN in .env</div>
-                </div>
-                <ConnectedDot active={settings.notion_configured} />
-              </div>
-
-              {settings.notion_configured && (
-                <div style={{ animation: 's-fade 0.2s ease' }}>
-                  <div style={{ marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <label style={{ color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Page ID</label>
-                      {settings.notion_page_id_from_env && (
-                        <span style={{ color: '#383838', fontSize: '10px', fontStyle: 'italic' }}>via NOTION_PAGE_ID env var</span>
-                      )}
-                    </div>
-                    <input
-                      value={settings.notion_page_id || ''}
-                      onChange={e => !settings.notion_page_id_from_env && setSettings(s => ({ ...s, notion_page_id: e.target.value }))}
-                      onBlur={e => !settings.notion_page_id_from_env && save({ notion_page_id: e.target.value })}
-                      placeholder="32-char ID from page URL"
-                      readOnly={settings.notion_page_id_from_env}
-                      style={{ width: '100%', boxSizing: 'border-box', background: settings.notion_page_id_from_env ? '#0a0a0a' : '#111', border: '1px solid #222', borderRadius: '4px', padding: '8px 12px', color: settings.notion_page_id_from_env ? '#555' : '#e0e0e0', fontSize: '12px', outline: 'none', fontFamily: 'monospace', cursor: settings.notion_page_id_from_env ? 'default' : 'text' }}
-                      onFocus={e => { if (!settings.notion_page_id_from_env) e.target.style.borderColor = '#c9a96e' }}
-                      onBlurCapture={e => e.target.style.borderColor = '#222'}
-                    />
-                    {!settings.notion_page_id_from_env && (
-                      <p style={{ color: '#333', fontSize: '11px', margin: '5px 0 0' }}>Or set NOTION_PAGE_ID in .env to configure server-side.</p>
-                    )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-sm) var(--space-md)', background: 'var(--bg-muted)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>Auto-save to Notion</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Save every result automatically after running</div>
                   </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#111', borderRadius: '6px', border: '1px solid #1a1a1a' }}>
-                    <div>
-                      <div style={{ color: '#ccc', fontSize: '13px', fontWeight: 500 }}>Auto-save to Notion</div>
-                      <div style={{ color: '#383838', fontSize: '11px', marginTop: '2px' }}>Save every result automatically after running</div>
-                    </div>
-                    <Toggle checked={settings.auto_save_notion} onChange={v => save({ auto_save_notion: v })} />
-                  </div>
+                  <Toggle checked={settings.auto_save_notion} onChange={v => save({ auto_save_notion: v })} />
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
-
-        {saved && (
-          <div style={{ color: '#4caf50', fontSize: '12px', animation: 's-fade 0.2s ease' }}>✓ Saved</div>
-        )}
       </div>
-    </>
+
+      {saved && (
+        <div className="settings-saved" style={{ animation: 's-fade 0.2s ease' }}>✓ Saved</div>
+      )}
+    </div>
   )
 }
