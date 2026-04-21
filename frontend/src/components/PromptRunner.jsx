@@ -4,7 +4,6 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getPrompt, runPrompt, saveToNotion, getConfig } from '../api'
 
-
 const STATUS_MESSAGES = [
   'Sending request to model...',
   'Waiting for response...',
@@ -15,40 +14,27 @@ const STATUS_MESSAGES = [
 
 function Loader({ elapsed, model }) {
   const [msgIdx, setMsgIdx] = useState(0)
-
   useEffect(() => {
     const t = setInterval(() => setMsgIdx(i => (i + 1) % STATUS_MESSAGES.length), 3500)
     return () => clearInterval(t)
   }, [])
 
   return (
-    <div style={{ padding: '28px 24px', animation: 'vr-fade-in 0.3s ease' }}>
-      {/* Progress bar */}
-      <div style={{ height: '2px', background: '#1a1a1a', borderRadius: '2px', marginBottom: '24px', overflow: 'hidden' }}>
-        <div style={{ height: '100%', background: 'linear-gradient(90deg, #c9a96e, #e8c47e)', borderRadius: '2px', animation: 'vr-bar 30s ease-out forwards' }} />
+    <div className="loader">
+      <div className="loader-bar-track">
+        <div className="loader-bar-fill" />
       </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        {/* Spinner */}
-        <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
-          <div style={{
-            position: 'absolute', inset: 0,
-            border: '2px solid #1e1e1e', borderTopColor: '#c9a96e',
-            borderRadius: '50%', animation: 'vr-spin 0.9s linear infinite'
-          }} />
-          <div style={{
-            position: 'absolute', inset: '6px',
-            border: '1.5px solid #1a1a1a', borderBottomColor: '#8a6a3e',
-            borderRadius: '50%', animation: 'vr-spin 1.4s linear infinite reverse'
-          }} />
+      <div className="loader-body">
+        <div className="loader-spinner">
+          <div className="loader-ring-outer" />
+          <div className="loader-ring-inner" />
         </div>
-
         <div style={{ flex: 1 }}>
-          <div style={{ color: '#e0e0e0', fontSize: '13px', fontWeight: 500, marginBottom: '4px', animation: 'vr-fade-in 0.4s ease' }} key={msgIdx}>
+          <div className="loader-status" key={msgIdx} style={{ animation: 'vr-fade-in 0.4s ease' }}>
             {STATUS_MESSAGES[msgIdx]}
           </div>
-          <div style={{ color: '#444', fontSize: '11px' }}>
-            {model && <span style={{ fontFamily: 'monospace', color: '#3a3a3a', marginRight: '8px' }}>{model.model}</span>}
+          <div className="loader-meta">
+            {model && <span style={{ marginRight: '8px' }}>{model.model}</span>}
             {elapsed < 5
               ? 'processing your request'
               : elapsed < 15
@@ -56,21 +42,18 @@ function Loader({ elapsed, model }) {
               : `${elapsed}s — still working, please wait`}
           </div>
         </div>
-
-        {/* Elapsed badge */}
-        <div style={{ background: '#1a1a1a', border: '1px solid #222', borderRadius: '4px', padding: '4px 10px', textAlign: 'center', flexShrink: 0 }}>
-          <div style={{ color: '#c9a96e', fontSize: '16px', fontWeight: 600, lineHeight: 1 }}>{elapsed}</div>
-          <div style={{ color: '#444', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>sec</div>
+        <div className="loader-elapsed">
+          <div className="loader-elapsed-num">{elapsed}</div>
+          <div className="loader-elapsed-unit">sec</div>
         </div>
       </div>
-
-      {/* Animated dots */}
-      <div style={{ display: 'flex', gap: '6px', marginTop: '20px', paddingLeft: '52px' }}>
+      <div className="loader-dots">
         {[0, 1, 2].map(i => (
-          <div key={i} style={{
-            width: '5px', height: '5px', borderRadius: '50%', background: '#c9a96e',
-            animation: `vr-dot 1.4s ease-in-out ${i * 0.16}s infinite`
-          }} />
+          <div
+            key={i}
+            className="loader-dot"
+            style={{ animation: `vr-dot 1.4s ease-in-out ${i * 0.16}s infinite` }}
+          />
         ))}
       </div>
     </div>
@@ -80,35 +63,32 @@ function Loader({ elapsed, model }) {
 function PromptTextView({ text }) {
   const parts = text.split(/(\[[^\]]+\])/g)
   return (
-    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#666', fontSize: '12px', lineHeight: '1.8', margin: 0, fontFamily: 'inherit' }}>
+    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: 'var(--text-muted)', fontSize: '12px', lineHeight: '1.8', margin: 0, fontFamily: 'inherit' }}>
       {parts.map((part, i) =>
         /^\[[^\]]+\]$/.test(part)
-          ? <mark key={i} style={{ background: 'rgba(201,169,110,0.15)', color: '#c9a96e', borderRadius: '3px', padding: '0 3px', fontWeight: 500 }}>{part}</mark>
+          ? <mark key={i} style={{ background: 'rgba(90,42,154,0.08)', color: 'var(--cat-quick-text)', borderRadius: '3px', padding: '0 3px', fontWeight: 500 }}>{part}</mark>
           : <span key={i}>{part}</span>
       )}
     </pre>
   )
 }
 
-const PROVIDER_LABEL = { anthropic: 'Anthropic', openai: 'OpenAI' }
-const PROVIDER_DEFAULT_MODEL = { anthropic: 'claude-opus-4-6', openai: 'gpt-4o' }
-
 export default function PromptRunner() {
   const { promptId } = useParams()
   const navigate = useNavigate()
   const [prompt, setPrompt] = useState(null)
   const [inputs, setInputs] = useState({})
-  const [rawDates, setRawDates] = useState({})  // YYYY-MM-DD for date picker values
-  const [fullConfig, setFullConfig] = useState(null)      // full /config response
-  const [activeModel, setActiveModel] = useState(null)   // { provider, model } resolved for this prompt
+  const [rawDates, setRawDates] = useState({})
+  const [fullConfig, setFullConfig] = useState(null)
+  const [activeModel, setActiveModel] = useState(null)
   const [result, setResult] = useState('')
-  const [usedModel, setUsedModel] = useState(null)       // { provider, model } from last run response
+  const [usedModel, setUsedModel] = useState(null)
   const [historyId, setHistoryId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState('')
-  const [showTip, setShowTip] = useState(false)
   const [showPromptText, setShowPromptText] = useState(false)
+  const [showTip, setShowTip] = useState(false)
   const [notionStatus, setNotionStatus] = useState('')
   const timerRef = useRef(null)
 
@@ -146,10 +126,7 @@ export default function PromptRunner() {
     setElapsed(0)
     timerRef.current = setInterval(() => setElapsed(s => s + 1), 1000)
   }
-
-  const stopTimer = () => {
-    clearInterval(timerRef.current)
-  }
+  const stopTimer = () => clearInterval(timerRef.current)
 
   const handleRun = async () => {
     setLoading(true)
@@ -195,160 +172,139 @@ export default function PromptRunner() {
     }
   }
 
-  if (!prompt) return <div style={{ padding: '24px', color: '#444' }}>Loading...</div>
+  if (!prompt) return <div className="page" style={{ color: 'var(--text-muted)' }}>Loading...</div>
 
   return (
-    <>
-      <div style={{ padding: '28px 24px', maxWidth: '860px' }}>
+    <div className="runner">
+      {/* Left column — form */}
+      <div className="runner-form">
+        <button className="back-link" onClick={() => navigate('/')}>← Library</button>
 
-        {/* Header */}
-        <div style={{ marginBottom: '22px' }}>
-          <h1 style={{ color: '#fff', fontSize: '19px', fontWeight: 600, margin: '0 0 5px' }}>{prompt.name}</h1>
-          <p style={{ color: '#555', fontSize: '13px', margin: '0 0 12px', lineHeight: '1.5' }}>{prompt.description}</p>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => setShowPromptText(!showPromptText)} style={ghostBtn}>
-              {showPromptText ? '▲ Hide Prompt' : '▼ View Prompt'}
+        <span className={`cat-badge ${prompt.category}`}>
+          {(prompt.category || '').replace(/-/g, ' ')}
+        </span>
+        <h1 className="runner-title">{prompt.name}</h1>
+        {prompt.description && (
+          <p className="runner-desc">{prompt.description}</p>
+        )}
+
+        <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)', flexWrap: 'wrap' }}>
+          <button className="btn-ghost" onClick={() => setShowPromptText(v => !v)}>
+            {showPromptText ? '▲ Hide Prompt' : '▼ View Prompt'}
+          </button>
+          {prompt.pro_tip && (
+            <button className="btn-ghost" onClick={() => setShowTip(v => !v)}>
+              {showTip ? '▲' : '▼'} Pro Tip
             </button>
-            {prompt.pro_tip && (
-              <button onClick={() => setShowTip(!showTip)} style={ghostBtn}>
-                {showTip ? '▲' : '▼'} Pro Tip
-              </button>
-            )}
-          </div>
-
-          {showPromptText && (
-            <div style={{ background: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '6px', padding: '16px', marginTop: '10px', maxHeight: '300px', overflowY: 'auto', animation: 'vr-fade-in 0.2s ease' }}>
-              <div style={{ color: '#383838', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>
-                Full Prompt — <span style={{ color: '#c9a96e' }}>highlighted</span> fields are filled by your inputs
-              </div>
-              <PromptTextView text={prompt.prompt_text} />
-            </div>
-          )}
-
-          {showTip && (
-            <div style={{ background: '#110e06', border: '1px solid #2a2010', borderRadius: '6px', padding: '12px 14px', marginTop: '8px', color: '#c9a96e', fontSize: '12px', lineHeight: '1.6', animation: 'vr-fade-in 0.2s ease' }}>
-              <span style={{ color: '#8a6a3e', fontWeight: 600, marginRight: '6px' }}>Pro Tip</span>
-              {prompt.pro_tip}
-            </div>
           )}
         </div>
 
-        {/* Input Form */}
-        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '8px', padding: '18px', marginBottom: '16px' }}>
-          {(prompt.placeholders || []).length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-              {(prompt.placeholders || []).map(key => {
-                const isDate = /^(date|insert date)$/i.test(key.trim())
-                return (
-                  <div key={key} style={{ flex: '1', minWidth: '200px' }}>
-                    <label style={{ display: 'block', color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
-                      {key}
-                    </label>
-                    <input
-                      type={isDate ? 'date' : 'text'}
-                      value={isDate ? (rawDates[key] || '') : (inputs[key] || '')}
-                      onChange={e => {
-                        if (isDate) {
-                          const raw = e.target.value  // YYYY-MM-DD
-                          setRawDates(d => ({ ...d, [key]: raw }))
-                          if (raw) {
-                            const [y, m, day] = raw.split('-')
-                            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-                            const formatted = `${parseInt(day)} ${months[parseInt(m)-1]} ${y}`
-                            setInputs(prev => ({ ...prev, [key]: formatted }))
-                          } else {
-                            setInputs(prev => ({ ...prev, [key]: '' }))
-                          }
-                        } else {
-                          setInputs(prev => ({ ...prev, [key]: e.target.value }))
-                        }
-                      }}
-                      style={{ width: '100%', boxSizing: 'border-box', background: '#0d0d0d', border: '1px solid #222', borderRadius: '4px', padding: '9px 10px', color: '#e0e0e0', fontSize: '13px', outline: 'none', transition: 'border-color 0.15s', colorScheme: 'dark' }}
-                      onFocus={e => e.target.style.borderColor = '#c9a96e'}
-                      onBlur={e => e.target.style.borderColor = '#222'}
-                    />
-                  </div>
-                )
-              })}
+        {showPromptText && (
+          <div className="prompt-preview" style={{ animation: 'vr-fade-in 0.2s ease' }}>
+            <div className="prompt-preview-label">
+              Full prompt — <span style={{ color: 'var(--cat-quick-text)' }}>highlighted</span> = your inputs
             </div>
-          )}
-
-          {!loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <button onClick={handleRun} style={{ background: '#c9a96e', color: '#000', border: 'none', borderRadius: '4px', padding: '10px 28px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'opacity 0.15s' }}
-                onMouseEnter={e => e.target.style.opacity = '0.85'}
-                onMouseLeave={e => e.target.style.opacity = '1'}
-              >
-                Run →
-              </button>
-              {activeModel && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ color: '#333', fontSize: '11px' }}>via</span>
-                  <span style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', color: '#888', fontFamily: 'monospace' }}>
-                    {activeModel.model}
-                  </span>
-                  <span style={{ color: '#2a2a2a', fontSize: '11px' }}>·</span>
-                  <button
-                    onClick={() => navigate('/settings')}
-                    style={{ background: 'none', border: 'none', color: '#3a3a3a', fontSize: '11px', cursor: 'pointer', padding: '0', textDecoration: 'underline', textDecorationColor: '#2a2a2a' }}
-                  >
-                    change
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <Loader elapsed={elapsed} model={activeModel} />
-          )}
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div style={{ background: '#1a0808', border: '1px solid #3a1515', borderRadius: '6px', padding: '12px 14px', color: '#ff6b6b', fontSize: '13px', marginBottom: '16px', animation: 'vr-fade-in 0.2s ease' }}>
-            {error}
+            <PromptTextView text={prompt.prompt_text} />
           </div>
         )}
 
-        {/* Result */}
-        {result && (
+        {showTip && (
+          <div className="pro-tip" style={{ animation: 'vr-fade-in 0.2s ease' }}>
+            <strong>Pro Tip — </strong>{prompt.pro_tip}
+          </div>
+        )}
+
+        {(prompt.placeholders || []).length > 0 && (
+          <div style={{ marginTop: 'var(--space-md)' }}>
+            {(prompt.placeholders || []).map(key => {
+              const isDate = /^(date|insert date)$/i.test(key.trim())
+              return (
+                <div key={key}>
+                  <label className="form-label">{key}</label>
+                  <input
+                    className="form-input"
+                    type={isDate ? 'date' : 'text'}
+                    value={isDate ? (rawDates[key] || '') : (inputs[key] || '')}
+                    onChange={e => {
+                      if (isDate) {
+                        const raw = e.target.value
+                        setRawDates(d => ({ ...d, [key]: raw }))
+                        if (raw) {
+                          const [y, m, day] = raw.split('-')
+                          const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+                          setInputs(prev => ({ ...prev, [key]: `${parseInt(day)} ${months[parseInt(m)-1]} ${y}` }))
+                        } else {
+                          setInputs(prev => ({ ...prev, [key]: '' }))
+                        }
+                      } else {
+                        setInputs(prev => ({ ...prev, [key]: e.target.value }))
+                      }
+                    }}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        <button className="btn-primary" onClick={handleRun} disabled={loading}>
+          {loading ? 'Running…' : 'Run →'}
+        </button>
+
+        {activeModel && !loading && (
+          <div className="model-pill">
+            <span style={{ fontSize: '11px', color: 'var(--text-faint)' }}>via</span>
+            <span className="model-tag">{activeModel.model}</span>
+            <button className="model-change" onClick={() => navigate('/settings')}>change</button>
+          </div>
+        )}
+      </div>
+
+      {/* Right column — output */}
+      <div className="runner-output">
+        {loading && <Loader elapsed={elapsed} model={activeModel} />}
+
+        {error && !loading && (
+          <div className="error-box" style={{ animation: 'vr-fade-in 0.2s ease' }}>{error}</div>
+        )}
+
+        {result && !loading && (
           <div style={{ animation: 'vr-fade-in 0.3s ease' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: '#555', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Result</span>
+            <div className="output-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                <span className="output-label">Result</span>
                 {usedModel && (
-                  <span style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '3px', padding: '2px 8px', fontSize: '10px', color: '#555', fontFamily: 'monospace' }}>
-                    {PROVIDER_LABEL[usedModel.provider] || usedModel.provider} / {usedModel.model}
-                  </span>
+                  <span className="model-badge">{usedModel.provider} / {usedModel.model}</span>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                {notionStatus === 'saved' && <span style={{ color: '#4caf50', fontSize: '11px' }}>✓ Saved to Notion</span>}
+              <div className="action-bar">
+                {notionStatus === 'saved' && <span className="success-text">✓ Saved to Notion</span>}
                 {notionStatus && notionStatus !== 'saved' && notionStatus !== 'saving' && (
-                  <span style={{ color: '#ff6b6b', fontSize: '11px' }} title={notionStatus}>Notion failed</span>
+                  <span style={{ fontSize: '11px', color: 'var(--color-danger)' }}>Notion failed</span>
                 )}
-                <button onClick={handleSaveToNotion} disabled={notionStatus === 'saving' || notionStatus === 'saved'} style={{ ...actionBtn, color: notionStatus === 'saved' ? '#4caf50' : '#666' }}>
-                  {notionStatus === 'saving' ? '...' : 'Notion'}
+                <button
+                  className="btn-action"
+                  onClick={handleSaveToNotion}
+                  disabled={notionStatus === 'saving' || notionStatus === 'saved'}
+                >
+                  {notionStatus === 'saving' ? '…' : 'Notion'}
                 </button>
-                <button onClick={handleDownload} style={actionBtn}>⬇ .md</button>
-                <button onClick={handleCopy} style={actionBtn}>Copy</button>
+                <button className="btn-action" onClick={handleDownload}>⬇ .md</button>
+                <button className="btn-action" onClick={handleCopy}>Copy</button>
               </div>
             </div>
-            <div className="md" style={{ background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', padding: '28px 32px' }}>
+            <div className="md">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{result}</ReactMarkdown>
             </div>
           </div>
         )}
+
+        {!loading && !result && !error && (
+          <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>
+            Fill in the form and click Run →
+          </div>
+        )}
       </div>
-    </>
+    </div>
   )
-}
-
-const ghostBtn = {
-  background: 'none', border: '1px solid #222', color: '#555',
-  padding: '4px 11px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer'
-}
-
-const actionBtn = {
-  background: '#111', border: '1px solid #222', color: '#666',
-  padding: '5px 12px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer'
 }
