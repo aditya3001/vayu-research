@@ -1,7 +1,6 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 
 export default function Navbar() {
-  const navigate = useNavigate()
   return (
     <nav className="nav">
       <NavLink to="/" className="nav-logo" end>VAYU</NavLink>
