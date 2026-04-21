@@ -66,7 +66,7 @@ function PromptTextView({ text }) {
     <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: 'var(--text-muted)', fontSize: '12px', lineHeight: '1.8', margin: 0, fontFamily: 'inherit' }}>
       {parts.map((part, i) =>
         /^\[[^\]]+\]$/.test(part)
-          ? <mark key={i} style={{ background: 'rgba(90,42,154,0.08)', color: 'var(--cat-quick-text)', borderRadius: '3px', padding: '0 3px', fontWeight: 500 }}>{part}</mark>
+          ? <mark key={i} style={{ background: 'var(--cat-quick-bg)', color: 'var(--cat-quick-text)', borderRadius: '3px', padding: '0 3px', fontWeight: 500 }}>{part}</mark>
           : <span key={i}>{part}</span>
       )}
     </pre>
