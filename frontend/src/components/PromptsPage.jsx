@@ -11,6 +11,8 @@ const CATEGORIES = [
   { id: 'visual-design',        label: 'Visual' },
 ]
 
+const CAT_ORDER = CATEGORIES.filter(c => c.id !== 'all').map(c => c.id)
+
 export default function PromptsPage() {
   const navigate = useNavigate()
   const [grouped, setGrouped] = useState({})
@@ -32,6 +34,14 @@ export default function PromptsPage() {
       p.description?.toLowerCase().includes(search.toLowerCase())
     return matchCat && matchSearch
   })
+
+  const groupedFiltered = CAT_ORDER
+    .map(catId => ({
+      catId,
+      label: CATEGORIES.find(c => c.id === catId)?.label || catId,
+      prompts: filtered.filter(p => p.categoryId === catId),
+    }))
+    .filter(g => g.prompts.length > 0)
 
   return (
     <div className="page">
@@ -56,16 +66,30 @@ export default function PromptsPage() {
         />
       </div>
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && (
         <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No prompts found.</p>
+      )}
+
+      {activeTab === 'all' ? (
+        <div className="library-sections">
+          {groupedFiltered.map(({ catId, label, prompts }) => (
+            <div key={catId} className="library-section">
+              <div className="library-section-header">
+                <span className={`cat-badge ${catId}`}>{label}</span>
+                <span className="library-section-count">{prompts.length}</span>
+              </div>
+              <div className="card-grid">
+                {prompts.map(p => (
+                  <PromptCard key={p.id} prompt={p} onClick={() => navigate(`/prompt/${p.id}`)} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="card-grid">
           {filtered.map(p => (
-            <PromptCard
-              key={p.id}
-              prompt={p}
-              onClick={() => navigate(`/prompt/${p.id}`)}
-            />
+            <PromptCard key={p.id} prompt={p} onClick={() => navigate(`/prompt/${p.id}`)} />
           ))}
         </div>
       )}

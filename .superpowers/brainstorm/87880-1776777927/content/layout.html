@@ -1,0 +1,88 @@
+<h2>Vayu — Light Mode: Which layout?</h2>
+<p class="subtitle">You chose the clean light aesthetic. Now pick a navigation layout.</p>
+
+<div class="options">
+  <div class="option" data-choice="sidebar" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Sidebar Navigation</h3>
+      <p>Always-visible left nav (same as today). Good for frequent page-switching. Slightly narrower content area.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Library · Sidebar</div>
+        <div class="mockup-body" style="display:flex;gap:0;padding:0;height:180px">
+          <div style="width:140px;background:#f5f3ef;border-right:1px solid #e8e5df;padding:14px 12px;flex-shrink:0">
+            <div style="font-size:10px;font-weight:900;letter-spacing:2px;color:#1a1a1a;margin-bottom:2px">VAYU</div>
+            <div style="font-size:7px;color:#ccc;letter-spacing:1px;margin-bottom:18px">RESEARCH</div>
+            <div style="font-size:10px;font-weight:700;color:#1a1a1a;padding:5px 7px;border-radius:3px;margin-bottom:3px">✦ Library</div>
+            <div style="font-size:10px;color:#bbb;padding:5px 7px;margin-bottom:3px">◷ History</div>
+            <div style="font-size:10px;color:#bbb;padding:5px 7px;margin-bottom:3px">⏱ Schedules</div>
+            <div style="font-size:10px;color:#bbb;padding:5px 7px;margin-top:30px">⚙ Settings</div>
+          </div>
+          <div style="flex:1;padding:14px 16px;background:#fff">
+            <div style="font-size:13px;font-weight:900;color:#1a1a1a;margin-bottom:2px">Research Library</div>
+            <div style="font-size:9px;color:#bbb;margin-bottom:10px">20 prompts</div>
+            <div style="display:flex;gap:0;border-bottom:1px solid #ede9e2;margin-bottom:10px">
+              <div style="font-size:9px;font-weight:700;color:#1a1a1a;padding:4px 10px;border-bottom:2px solid #1a1a1a;margin-bottom:-1px">All</div>
+              <div style="font-size:9px;color:#bbb;padding:4px 10px">Market</div>
+              <div style="font-size:9px;color:#bbb;padding:4px 10px">Fundamental</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <div style="border:1px solid #ede9e2;border-radius:4px;padding:8px">
+                <div style="font-size:7px;font-weight:700;background:#f0f7f4;color:#2a7a50;padding:1px 5px;border-radius:2px;display:inline-block;margin-bottom:5px">MARKET</div>
+                <div style="font-size:9px;font-weight:700;color:#1a1a1a">Daily Market Note</div>
+              </div>
+              <div style="border:1px solid #ede9e2;border-radius:4px;padding:8px">
+                <div style="font-size:7px;font-weight:700;background:#f0f4fa;color:#2a5a9a;padding:1px 5px;border-radius:2px;display:inline-block;margin-bottom:5px">FUNDAMENTAL</div>
+                <div style="font-size:9px;font-weight:700;color:#1a1a1a">Earnings Analysis</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="topnav" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Top Navigation</h3>
+      <p>Horizontal nav bar across the top. Full-width content area — cards get more room. Search lives in the header.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Library · Top Nav</div>
+        <div class="mockup-body" style="padding:0;height:180px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;height:38px;border-bottom:1px solid #ede9e2;padding:0 16px;background:#fff;flex-shrink:0;gap:0">
+            <div style="font-size:10px;font-weight:900;letter-spacing:2px;color:#1a1a1a;margin-right:24px">VAYU</div>
+            <div style="font-size:10px;font-weight:700;color:#1a1a1a;padding:0 12px;height:38px;display:flex;align-items:center;border-bottom:2px solid #1a1a1a">Library</div>
+            <div style="font-size:10px;color:#bbb;padding:0 12px;height:38px;display:flex;align-items:center">History</div>
+            <div style="font-size:10px;color:#bbb;padding:0 12px;height:38px;display:flex;align-items:center">Schedules</div>
+            <div style="flex:1"></div>
+            <div style="font-size:9px;color:#aaa;padding:4px 10px;border:1px solid #ede9e2;border-radius:4px;background:#f8f7f4">Search...</div>
+            <div style="margin-left:8px;font-size:11px;color:#888">⚙</div>
+          </div>
+          <div style="flex:1;padding:12px 16px;background:#fff">
+            <div style="font-size:13px;font-weight:900;color:#1a1a1a;margin-bottom:8px">Research Library</div>
+            <div style="display:flex;gap:5px;margin-bottom:10px">
+              <div style="font-size:9px;font-weight:700;background:#1a1a1a;color:#fff;padding:3px 8px;border-radius:3px">All</div>
+              <div style="font-size:9px;color:#aaa;border:1px solid #ede9e2;padding:3px 8px;border-radius:3px">Market</div>
+              <div style="font-size:9px;color:#aaa;border:1px solid #ede9e2;padding:3px 8px;border-radius:3px">Fundamental</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+              <div style="border:1px solid #ede9e2;border-radius:4px;padding:8px">
+                <div style="font-size:7px;font-weight:700;background:#f0f7f4;color:#2a7a50;padding:1px 5px;border-radius:2px;display:inline-block;margin-bottom:5px">MARKET</div>
+                <div style="font-size:9px;font-weight:700;color:#1a1a1a">Daily Market Note</div>
+              </div>
+              <div style="border:1px solid #ede9e2;border-radius:4px;padding:8px">
+                <div style="font-size:7px;font-weight:700;background:#f0f4fa;color:#2a5a9a;padding:1px 5px;border-radius:2px;display:inline-block;margin-bottom:5px">FUNDAMENTAL</div>
+                <div style="font-size:9px;font-weight:700;color:#1a1a1a">Earnings Analysis</div>
+              </div>
+              <div style="border:1px solid #ede9e2;border-radius:4px;padding:8px">
+                <div style="font-size:7px;font-weight:700;background:#f4f0fa;color:#5a2a9a;padding:1px 5px;border-radius:2px;display:inline-block;margin-bottom:5px">QUICK</div>
+                <div style="font-size:9px;font-weight:700;color:#1a1a1a">Stock One-Pager</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

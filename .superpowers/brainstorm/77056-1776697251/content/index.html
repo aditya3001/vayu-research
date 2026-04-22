@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vayu Research — Layout Options (Option C)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f0ede8; color: #1a1a1a; font-family: 'Inter', system-ui, sans-serif; padding: 40px 32px; }
+  h1 { font-size: 20px; font-weight: 800; color: #1a1a1a; margin-bottom: 4px; letter-spacing: -0.5px; }
+  .subtitle { color: #999; font-size: 13px; margin-bottom: 40px; }
+  .label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #888; margin-bottom: 14px; }
+  .section { margin-bottom: 60px; }
+  .tag { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 3px; margin-left: 8px; font-weight: 600; background: #1a1a1a22; color: #1a1a1a; border: 1px solid #1a1a1a44; }
+  .desc-block { margin-top: 14px; padding: 14px 18px; border-radius: 8px; font-size: 12px; line-height: 1.7; background: #faf9f6; border: 1px solid #e8e5df; color: #888; }
+  .desc-block strong { display: block; margin-bottom: 4px; color: #333; }
+
+  /* ── Shared card styles ── */
+  .card { border: 1px solid #ede9e2; border-radius: 6px; padding: 15px; background: #fff; }
+  .card-badge { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; margin-bottom: 9px; }
+  .card-name { font-size: 13px; font-weight: 700; color: #1a1a1a; margin-bottom: 5px; line-height: 1.4; }
+  .card-desc { font-size: 11px; color: #aaa; line-height: 1.6; }
+  .card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 11px; }
+  .card-inputs { font-size: 10px; color: #ccc; }
+  .card-run { font-size: 11px; color: #1a1a1a; font-weight: 700; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+  /* ── LAYOUT A: Sidebar ── */
+  .la { background: #fff; border: 1px solid #e8e5df; border-radius: 12px; overflow: hidden; display: flex; height: 440px; }
+  .la .sidebar { width: 196px; background: #f5f3ef; border-right: 1px solid #e8e5df; padding: 24px 16px; flex-shrink: 0; display: flex; flex-direction: column; }
+  .la .sidebar .logo { font-size: 12px; font-weight: 900; color: #1a1a1a; letter-spacing: 3px; margin-bottom: 2px; }
+  .la .sidebar .sub { font-size: 9px; color: #ccc; letter-spacing: 1.5px; margin-bottom: 28px; }
+  .la .nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 4px; font-size: 12px; color: #bbb; margin-bottom: 2px; cursor: pointer; }
+  .la .nav-item.active { color: #1a1a1a; font-weight: 600; }
+  .la .nav-item.active .dot { width: 4px; height: 4px; border-radius: 50%; background: #1a1a1a; margin-left: auto; }
+  .la .spacer { flex: 1; }
+  .la .content { flex: 1; padding: 26px 26px; overflow: auto; }
+  .la .page-title { font-size: 20px; font-weight: 900; color: #1a1a1a; letter-spacing: -0.5px; margin-bottom: 3px; }
+  .la .page-sub { font-size: 12px; color: #bbb; margin-bottom: 18px; }
+  .la .filter-row { display: flex; gap: 0; margin-bottom: 18px; border-bottom: 1px solid #ede9e2; }
+  .la .chip { padding: 6px 14px; font-size: 11px; font-weight: 500; color: #bbb; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .la .chip.active { color: #1a1a1a; border-bottom-color: #1a1a1a; font-weight: 700; }
+
+  /* ── LAYOUT B: Top Nav ── */
+  .lb { background: #fff; border: 1px solid #e8e5df; border-radius: 12px; overflow: hidden; height: 440px; display: flex; flex-direction: column; }
+  .lb .topbar { background: #fff; border-bottom: 1px solid #ede9e2; padding: 0 28px; display: flex; align-items: center; height: 54px; flex-shrink: 0; }
+  .lb .topbar .logo { font-size: 12px; font-weight: 900; color: #1a1a1a; letter-spacing: 3px; margin-right: 40px; }
+  .lb .topbar .logo span { color: #ccc; font-weight: 400; font-size: 9px; letter-spacing: 1.5px; display: block; }
+  .lb .nav-links { display: flex; gap: 0; flex: 1; }
+  .lb .nav-item { padding: 0 16px; height: 54px; display: flex; align-items: center; font-size: 12px; color: #bbb; cursor: pointer; border-bottom: 2px solid transparent; }
+  .lb .nav-item.active { color: #1a1a1a; font-weight: 600; border-bottom-color: #1a1a1a; }
+  .lb .nav-right { display: flex; align-items: center; gap: 10px; }
+  .lb .search { padding: 6px 12px; border: 1px solid #ede9e2; border-radius: 5px; font-size: 11px; color: #999; background: #f8f7f4; outline: none; width: 160px; }
+  .lb .settings-btn { width: 30px; height: 30px; border-radius: 5px; border: 1px solid #ede9e2; background: #f8f7f4; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #888; cursor: pointer; }
+  .lb .content { flex: 1; padding: 24px 28px; overflow: auto; }
+  .lb .header-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
+  .lb .page-title { font-size: 20px; font-weight: 900; color: #1a1a1a; letter-spacing: -0.5px; }
+  .lb .page-sub { font-size: 12px; color: #bbb; }
+  .lb .filter-row { display: flex; gap: 5px; margin-bottom: 18px; }
+  .lb .chip { padding: 5px 12px; font-size: 11px; font-weight: 500; color: #aaa; cursor: pointer; border: 1px solid #ede9e2; border-radius: 4px; background: #faf9f6; }
+  .lb .chip.active { color: #1a1a1a; background: #1a1a1a; border-color: #1a1a1a; font-weight: 700; color: #fff; }
+</style>
+</head>
+<body>
+
+<h1>Vayu Research — Light Mode</h1>
+<p class="subtitle">You picked Option C. Now: sidebar layout or top navigation?</p>
+
+<!-- Layout A: Sidebar -->
+<div class="section">
+  <div class="label">Layout A — Sidebar  <span class="tag">familiar</span></div>
+  <div class="la">
+    <div class="sidebar">
+      <div class="logo">VAYU</div>
+      <div class="sub">RESEARCH</div>
+      <div class="nav-item active">✦ Library <div class="dot"></div></div>
+      <div class="nav-item">◷ History</div>
+      <div class="nav-item">⏱ Schedules</div>
+      <div class="spacer"></div>
+      <div class="nav-item">⚙ Settings</div>
+    </div>
+    <div class="content">
+      <div class="page-title">Research Library</div>
+      <div class="page-sub">20 prompts · click any to run</div>
+      <div class="filter-row">
+        <div class="chip active">All</div>
+        <div class="chip">Market Intel</div>
+        <div class="chip">Fundamental</div>
+        <div class="chip">Quick Tools</div>
+        <div class="chip">Advanced</div>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <div class="card-badge" style="background:#f0f7f4;color:#2a7a50">Market Intel</div>
+          <div class="card-name">Daily Market Note</div>
+          <div class="card-desc">Pre-market brief covering indices, key events, sector positioning.</div>
+          <div class="card-footer"><span class="card-inputs">2 inputs</span><span class="card-run">Run →</span></div>
+        </div>
+        <div class="card">
+          <div class="card-badge" style="background:#f0f4fa;color:#2a5a9a">Fundamental</div>
+          <div class="card-name">Earnings Analysis</div>
+          <div class="card-desc">Deep dive into quarterly results, management commentary, guidance.</div>
+          <div class="card-footer"><span class="card-inputs">3 inputs</span><span class="card-run">Run →</span></div>
+        </div>
+        <div class="card">
+          <div class="card-badge" style="background:#f4f0fa;color:#5a2a9a">Quick Tools</div>
+          <div class="card-name">Stock One-Pager</div>
+          <div class="card-desc">Business model, financials, moat, risks in one tight page.</div>
+          <div class="card-footer"><span class="card-inputs">1 input</span><span class="card-run">Run →</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="desc-block">
+    <strong>Sidebar layout</strong>
+    Always-visible navigation. Good when you switch between Library, History, and Schedules frequently. Uses horizontal space. Sidebar width stays fixed — content area is slightly narrower, which is fine for a 3-col grid.
+  </div>
+</div>
+
+<!-- Layout B: Top Nav -->
+<div class="section">
+  <div class="label">Layout B — Top Navigation  <span class="tag">more content space</span></div>
+  <div class="lb">
+    <div class="topbar">
+      <div class="logo">VAYU <span>RESEARCH</span></div>
+      <div class="nav-links">
+        <div class="nav-item active">Library</div>
+        <div class="nav-item">History</div>
+        <div class="nav-item">Schedules</div>
+      </div>
+      <div class="nav-right">
+        <input class="search" placeholder="Search prompts..." />
+        <div class="settings-btn">⚙</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="header-row">
+        <div class="page-title">Research Library</div>
+        <div class="page-sub">20 prompts · click any to run</div>
+      </div>
+      <div class="filter-row">
+        <div class="chip active">All</div>
+        <div class="chip">Market Intel</div>
+        <div class="chip">Fundamental</div>
+        <div class="chip">Quick Tools</div>
+        <div class="chip">Advanced</div>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <div class="card-badge" style="background:#f0f7f4;color:#2a7a50">Market Intel</div>
+          <div class="card-name">Daily Market Note</div>
+          <div class="card-desc">Pre-market brief covering indices, key events, sector positioning.</div>
+          <div class="card-footer"><span class="card-inputs">2 inputs</span><span class="card-run">Run →</span></div>
+        </div>
+        <div class="card">
+          <div class="card-badge" style="background:#f0f4fa;color:#2a5a9a">Fundamental</div>
+          <div class="card-name">Earnings Analysis</div>
+          <div class="card-desc">Deep dive into quarterly results, management commentary, guidance.</div>
+          <div class="card-footer"><span class="card-inputs">3 inputs</span><span class="card-run">Run →</span></div>
+        </div>
+        <div class="card">
+          <div class="card-badge" style="background:#f4f0fa;color:#5a2a9a">Quick Tools</div>
+          <div class="card-name">Stock One-Pager</div>
+          <div class="card-desc">Business model, financials, moat, risks in one tight page.</div>
+          <div class="card-footer"><span class="card-inputs">1 input</span><span class="card-run">Run →</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="desc-block">
+    <strong>Top navigation</strong>
+    Full-width content area — cards get more breathing room. Search moves into the header bar (always accessible). Settings becomes an icon button, not a nav item. Feels more like a web app than a desktop tool. Slightly more modern for a research dashboard.
+  </div>
+</div>
+
+</body>
+</html>

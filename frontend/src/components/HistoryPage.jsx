@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getHistory, deleteHistory, downloadHistory } from '../api'
+import ConfirmDialog from './ConfirmDialog'
 
 export default function HistoryPage() {
   const [items, setItems] = useState([])
   const [selected, setSelected] = useState(null)
+  const [confirmId, setConfirmId] = useState(null)
 
   const load = () => getHistory().then(data => {
     setItems(data)
@@ -14,12 +16,17 @@ export default function HistoryPage() {
 
   useEffect(() => { load() }, [])
 
-  const handleDelete = async (id, e) => {
+  const handleDelete = (id, e) => {
     e.stopPropagation()
-    await deleteHistory(id)
-    const remaining = items.filter(i => i.id !== id)
+    setConfirmId(id)
+  }
+
+  const confirmDelete = async () => {
+    await deleteHistory(confirmId)
+    const remaining = items.filter(i => i.id !== confirmId)
     setItems(remaining)
-    if (selected?.id === id) setSelected(remaining[0] || null)
+    if (selected?.id === confirmId) setSelected(remaining[0] || null)
+    setConfirmId(null)
   }
 
   const fmt = (iso) => {
@@ -37,6 +44,14 @@ export default function HistoryPage() {
 
   return (
     <div className="history">
+      {confirmId && (
+        <ConfirmDialog
+          message="Delete this history entry?"
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirmId(null)}
+        />
+      )}
+
       {/* Left panel — list */}
       <div className="history-list">
         <div className="history-list-header">

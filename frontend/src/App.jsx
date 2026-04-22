@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Navbar from './components/Navbar'
+import Sidebar from './components/Sidebar'
 import PromptsPage from './components/PromptsPage'
 import PromptRunner from './components/PromptRunner'
 import HistoryPage from './components/HistoryPage'
@@ -10,8 +10,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <div className="app">
-        <Navbar />
-        <div className="app-body">
+        <Sidebar />
+        <div className="app-main">
           <Routes>
             <Route path="/" element={<PromptsPage />} />
             <Route path="/prompt/:promptId" element={<PromptRunner />} />

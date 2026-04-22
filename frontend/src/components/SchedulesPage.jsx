@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getSchedules, createSchedule, updateSchedule, deleteSchedule, toggleSchedule, getPrompts } from '../api'
+import ConfirmDialog from './ConfirmDialog'
 
 const FREQUENCIES = ['daily', 'weekdays', 'weekly']
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
@@ -8,6 +9,7 @@ export default function SchedulesPage() {
   const [schedules, setSchedules] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [confirmId, setConfirmId] = useState(null)
   const [allPrompts, setAllPrompts] = useState([])
   const [form, setForm] = useState({
     prompt_id: '', prompt_name: '', inputs: {},
@@ -49,6 +51,13 @@ export default function SchedulesPage() {
 
   return (
     <div className="page">
+      {confirmId && (
+        <ConfirmDialog
+          message="Delete this schedule?"
+          onConfirm={async () => { await deleteSchedule(confirmId); setConfirmId(null); load() }}
+          onCancel={() => setConfirmId(null)}
+        />
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-lg)' }}>
         <div>
           <h1 className="page-title">Schedules</h1>
@@ -89,7 +98,7 @@ export default function SchedulesPage() {
                   <button className="btn-sm" onClick={async () => { await toggleSchedule(s.id); load() }}>
                     {s.is_active ? '⏸ Pause' : '▶ Resume'}
                   </button>
-                  <button className="btn-sm danger" onClick={async () => { await deleteSchedule(s.id); load() }}>
+                  <button className="btn-sm danger" onClick={() => setConfirmId(s.id)}>
                     Delete
                   </button>
                 </div>
