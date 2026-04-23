@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getPrompts } from '../api'
+import { getPrompts, getHistory, getSchedules } from '../api'
+import { CatBadge, CAT_CONFIG } from './ui/Badge'
+import EmptyState from './ui/EmptyState'
+import StatsBar from './ui/StatsBar'
 
 const CATEGORIES = [
   { id: 'all',                  label: 'All' },
@@ -13,14 +16,38 @@ const CATEGORIES = [
 
 const CAT_ORDER = CATEGORIES.filter(c => c.id !== 'all').map(c => c.id)
 
+const SearchIcon = () => (
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"
+    style={{ width: 12, height: 12, position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', pointerEvents: 'none' }}>
+    <circle cx="6.5" cy="6.5" r="4" />
+    <path d="M11 11l2.5 2.5" />
+  </svg>
+)
+
 export default function PromptsPage() {
   const navigate = useNavigate()
-  const [grouped, setGrouped] = useState({})
-  const [activeTab, setActiveTab] = useState('all')
-  const [search, setSearch] = useState('')
+  const [grouped, setGrouped]         = useState({})
+  const [activeTab, setActiveTab]     = useState('all')
+  const [search, setSearch]           = useState('')
+  const [loading, setLoading]         = useState(true)
+  const [historyCount, setHistoryCount]       = useState(0)
+  const [activeSchedules, setActiveSchedules] = useState(0)
+  const [statsLoading, setStatsLoading]       = useState(true)
 
   useEffect(() => {
-    getPrompts().then(setGrouped).catch(console.error)
+    getPrompts()
+      .then(setGrouped)
+      .catch(console.error)
+      .finally(() => setLoading(false))
+
+    // Fetch stats in parallel — fire and forget, no blocking
+    Promise.all([getHistory(), getSchedules()])
+      .then(([history, schedules]) => {
+        setHistoryCount(history.length)
+        setActiveSchedules(schedules.filter(s => s.is_active).length)
+      })
+      .catch(() => {}) // stats are non-critical
+      .finally(() => setStatsLoading(false))
   }, [])
 
   const allPrompts = Object.entries(grouped).flatMap(([catId, prompts]) =>
@@ -28,7 +55,7 @@ export default function PromptsPage() {
   )
 
   const filtered = allPrompts.filter(p => {
-    const matchCat = activeTab === 'all' || p.categoryId === activeTab
+    const matchCat    = activeTab === 'all' || p.categoryId === activeTab
     const matchSearch = !search ||
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.description?.toLowerCase().includes(search.toLowerCase())
@@ -45,37 +72,62 @@ export default function PromptsPage() {
 
   return (
     <div className="page">
+      {/* Page header */}
       <h1 className="page-title">Research Library</h1>
-      <p className="page-sub">{allPrompts.length} prompts · click any to run</p>
+      <p className="page-sub">
+        {loading ? 'Loading prompts…' : `${allPrompts.length} prompts · click any to run`}
+      </p>
 
+      {/* Stats bar */}
+      <StatsBar
+        historyCount={historyCount}
+        activeSchedules={activeSchedules}
+        promptCount={allPrompts.length}
+        loading={statsLoading}
+      />
+
+      {/* Filter row */}
       <div className="filter-row">
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat.id}
-            className={'filter-chip' + (activeTab === cat.id ? ' active' : '')}
-            onClick={() => setActiveTab(cat.id)}
-          >
-            {cat.label}
-          </button>
-        ))}
-        <input
-          className="filter-search"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search prompts..."
-        />
+        {CATEGORIES.map(cat => {
+          const cfg = CAT_CONFIG[cat.id]
+          const Icon = cfg?.Icon
+          return (
+            <button
+              key={cat.id}
+              className={`filter-chip${activeTab === cat.id ? ' active' : ''}`}
+              onClick={() => setActiveTab(cat.id)}
+            >
+              {Icon && <Icon />}
+              {cat.label}
+            </button>
+          )
+        })}
+        <div style={{ position: 'relative', marginLeft: 'auto', marginBottom: 6 }}>
+          <SearchIcon />
+          <input
+            className="filter-search"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search…"
+            style={{ paddingLeft: 26 }}
+          />
+        </div>
       </div>
 
-      {filtered.length === 0 && (
-        <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No prompts found.</p>
+      {/* Results */}
+      {!loading && filtered.length === 0 && (
+        <EmptyState
+          title="No prompts found"
+          description={search ? `No results for "${search}"` : 'This category is empty.'}
+        />
       )}
 
       {activeTab === 'all' ? (
         <div className="library-sections">
-          {groupedFiltered.map(({ catId, label, prompts }) => (
+          {groupedFiltered.map(({ catId, prompts }) => (
             <div key={catId} className="library-section">
               <div className="library-section-header">
-                <span className={`cat-badge ${catId}`}>{label}</span>
+                <CatBadge category={catId} />
                 <span className="library-section-count">{prompts.length}</span>
               </div>
               <div className="card-grid">
@@ -100,9 +152,7 @@ export default function PromptsPage() {
 function PromptCard({ prompt, onClick }) {
   return (
     <div className="prompt-card" onClick={onClick}>
-      <span className={`cat-badge ${prompt.categoryId}`}>
-        {prompt.categoryId.replace(/-/g, ' ')}
-      </span>
+      <CatBadge category={prompt.categoryId} />
       <div className="card-name">{prompt.name}</div>
       {prompt.description && (
         <div className="card-desc">{prompt.description}</div>

@@ -1,21 +1,26 @@
 import { useState, useEffect } from 'react'
 import { getSchedules, createSchedule, updateSchedule, deleteSchedule, toggleSchedule, getPrompts } from '../api'
 import ConfirmDialog from './ConfirmDialog'
+import Modal from './ui/Modal'
+import EmptyState from './ui/EmptyState'
+import { StatusBadge, NotifBadge } from './ui/Badge'
 
 const FREQUENCIES = ['daily', 'weekdays', 'weekly']
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
+const BLANK_FORM = {
+  prompt_id: '', prompt_name: '', inputs: {},
+  frequency: 'daily', day_of_week: 'monday', run_time: '08:00',
+  notify_email: false, notify_telegram: false,
+}
+
 export default function SchedulesPage() {
-  const [schedules, setSchedules] = useState([])
-  const [showModal, setShowModal] = useState(false)
-  const [editing, setEditing] = useState(null)
-  const [confirmId, setConfirmId] = useState(null)
+  const [schedules, setSchedules]   = useState([])
+  const [showModal, setShowModal]   = useState(false)
+  const [editing, setEditing]       = useState(null)
+  const [confirmId, setConfirmId]   = useState(null)
   const [allPrompts, setAllPrompts] = useState([])
-  const [form, setForm] = useState({
-    prompt_id: '', prompt_name: '', inputs: {},
-    frequency: 'daily', day_of_week: 'monday', run_time: '08:00',
-    notify_email: false, notify_telegram: false,
-  })
+  const [form, setForm]             = useState(BLANK_FORM)
 
   const load = () => getSchedules().then(setSchedules)
 
@@ -25,9 +30,7 @@ export default function SchedulesPage() {
   }, [])
 
   const openNew = () => {
-    setEditing(null)
-    setForm({ prompt_id: '', prompt_name: '', inputs: {}, frequency: 'daily', day_of_week: 'monday', run_time: '08:00', notify_email: false, notify_telegram: false })
-    setShowModal(true)
+    setEditing(null); setForm(BLANK_FORM); setShowModal(true)
   }
 
   const openEdit = (s) => { setEditing(s.id); setForm({ ...s }); setShowModal(true) }
@@ -42,8 +45,7 @@ export default function SchedulesPage() {
 
   const handleSave = async () => {
     if (editing) { await updateSchedule(editing, form) } else { await createSchedule(form) }
-    setShowModal(false)
-    load()
+    setShowModal(false); load()
   }
 
   const active = schedules.filter(s => s.is_active).length
@@ -58,136 +60,140 @@ export default function SchedulesPage() {
           onCancel={() => setConfirmId(null)}
         />
       )}
+
+      {/* Page header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-lg)' }}>
         <div>
           <h1 className="page-title">Schedules</h1>
-          <p className="page-sub" style={{ marginBottom: 0 }}>{active} active · {paused} paused</p>
+          <p className="page-sub" style={{ marginBottom: 0 }}>
+            {active} active · {paused} paused
+          </p>
         </div>
         <button className="btn-new" onClick={openNew}>+ New Schedule</button>
       </div>
 
-      {schedules.length === 0 && (
-        <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No schedules yet.</p>
+      {/* Schedule list */}
+      {schedules.length === 0 ? (
+        <EmptyState
+          title="No schedules yet"
+          description="Automate your research by scheduling prompts to run on a recurring basis."
+          action={<button className="btn-new" onClick={openNew}>+ New Schedule</button>}
+        />
+      ) : (
+        <div className="schedule-list">
+          {schedules.map(s => (
+            <div key={s.id} className={`schedule-card${s.is_active ? '' : ' paused'}`}>
+              <div className="schedule-header">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                    <span className="schedule-name">{s.prompt_name}</span>
+                    <StatusBadge active={s.is_active} />
+                  </div>
+                  <div className="schedule-timing">
+                    {s.frequency === 'weekly'
+                      ? `Every ${s.day_of_week}`
+                      : s.frequency.charAt(0).toUpperCase() + s.frequency.slice(1)
+                    } at {s.run_time}
+                  </div>
+                  <div className="schedule-badges">
+                    {s.notify_email    && <NotifBadge type="email" />}
+                    {s.notify_telegram && <NotifBadge type="telegram" />}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                  <div className="schedule-actions">
+                    <button className="btn-sm" onClick={() => openEdit(s)}>Edit</button>
+                    <button className="btn-sm" onClick={async () => { await toggleSchedule(s.id); load() }}>
+                      {s.is_active ? '⏸ Pause' : '▶ Resume'}
+                    </button>
+                    <button className="btn-sm danger" onClick={() => setConfirmId(s.id)}>Delete</button>
+                  </div>
+                  <div className="schedule-last-run">
+                    {s.last_run_at
+                      ? `Last: ${s.last_run_at.slice(0, 16).replace('T', ' ')}`
+                      : 'Never run'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
-      <div className="schedule-list">
-        {schedules.map(s => (
-          <div key={s.id} className={'schedule-card' + (s.is_active ? '' : ' paused')}>
-            <div className="schedule-header">
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-xs)' }}>
-                  <span className="schedule-name">{s.prompt_name}</span>
-                  <span className={'badge ' + (s.is_active ? 'badge-active' : 'badge-paused')}>
-                    {s.is_active ? '● Active' : '⏸ Paused'}
-                  </span>
-                </div>
-                <div className="schedule-timing">
-                  {s.frequency === 'weekly'
-                    ? `Every ${s.day_of_week}`
-                    : s.frequency.charAt(0).toUpperCase() + s.frequency.slice(1)
-                  } at {s.run_time}
-                </div>
-                <div className="schedule-badges">
-                  {s.notify_email && <span className="badge badge-email">✉ Email</span>}
-                  {s.notify_telegram && <span className="badge badge-telegram">✈ Telegram</span>}
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 'var(--space-xs)' }}>
-                <div className="schedule-actions">
-                  <button className="btn-sm" onClick={() => openEdit(s)}>Edit</button>
-                  <button className="btn-sm" onClick={async () => { await toggleSchedule(s.id); load() }}>
-                    {s.is_active ? '⏸ Pause' : '▶ Resume'}
-                  </button>
-                  <button className="btn-sm danger" onClick={() => setConfirmId(s.id)}>
-                    Delete
-                  </button>
-                </div>
-                <div className="schedule-last-run">
-                  {s.last_run_at
-                    ? `Last: ${s.last_run_at.slice(0, 16).replace('T', ' ')}`
-                    : 'Never run'}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
+      {/* Create / Edit modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">{editing ? 'Edit Schedule' : 'New Schedule'}</h2>
+        <Modal title={editing ? 'Edit Schedule' : 'New Schedule'} onClose={() => setShowModal(false)}>
+          <label className="modal-label">Prompt</label>
+          <select
+            className="modal-select"
+            value={form.prompt_id}
+            onChange={e => handlePromptSelect(e.target.value)}
+            disabled={!!editing}
+          >
+            <option value="">— select a prompt —</option>
+            {allPrompts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
 
-            <label className="modal-label">Prompt</label>
-            <select
-              className="modal-select"
-              value={form.prompt_id}
-              onChange={e => handlePromptSelect(e.target.value)}
-              disabled={!!editing}
-            >
-              <option value="">— select a prompt —</option>
-              {allPrompts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-
-            {form.prompt_id && Object.keys(form.inputs).map(key => (
-              <div key={key}>
-                <label className="modal-label">{key}</label>
-                <input
-                  className="modal-input"
-                  value={form.inputs[key] || ''}
-                  onChange={e => setForm(f => ({ ...f, inputs: { ...f.inputs, [key]: e.target.value } }))}
-                  placeholder={`Enter ${key.toLowerCase()}`}
-                />
-              </div>
-            ))}
-
-            <label className="modal-label">Frequency</label>
-            <select className="modal-select" value={form.frequency} onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}>
-              {FREQUENCIES.map(f => <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
-            </select>
-
-            {form.frequency === 'weekly' && (
-              <>
-                <label className="modal-label">Day of Week</label>
-                <select className="modal-select" value={form.day_of_week} onChange={e => setForm(f => ({ ...f, day_of_week: e.target.value }))}>
-                  {DAYS.map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
-                </select>
-              </>
-            )}
-
-            <label className="modal-label">Run Time</label>
-            <input
-              className="modal-input"
-              type="time"
-              value={form.run_time}
-              onChange={e => setForm(f => ({ ...f, run_time: e.target.value }))}
-            />
-
-            <div className="modal-checks">
-              <label className="modal-check-label">
-                <input
-                  type="checkbox"
-                  checked={form.notify_email}
-                  onChange={e => setForm(f => ({ ...f, notify_email: e.target.checked }))}
-                />
-                Email
-              </label>
-              <label className="modal-check-label">
-                <input
-                  type="checkbox"
-                  checked={form.notify_telegram}
-                  onChange={e => setForm(f => ({ ...f, notify_telegram: e.target.checked }))}
-                />
-                Telegram
-              </label>
+          {form.prompt_id && Object.keys(form.inputs).map(key => (
+            <div key={key}>
+              <label className="modal-label">{key}</label>
+              <input
+                className="modal-input"
+                value={form.inputs[key] || ''}
+                onChange={e => setForm(f => ({ ...f, inputs: { ...f.inputs, [key]: e.target.value } }))}
+                placeholder={`Enter ${key.toLowerCase()}`}
+              />
             </div>
+          ))}
 
-            <div className="modal-footer">
-              <button className="btn-sm" onClick={() => setShowModal(false)}>Cancel</button>
-              <button className="btn-save" onClick={handleSave}>Save</button>
-            </div>
+          <label className="modal-label">Frequency</label>
+          <select
+            className="modal-select"
+            value={form.frequency}
+            onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}
+          >
+            {FREQUENCIES.map(f => <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
+          </select>
+
+          {form.frequency === 'weekly' && (
+            <>
+              <label className="modal-label">Day of Week</label>
+              <select
+                className="modal-select"
+                value={form.day_of_week}
+                onChange={e => setForm(f => ({ ...f, day_of_week: e.target.value }))}
+              >
+                {DAYS.map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
+              </select>
+            </>
+          )}
+
+          <label className="modal-label">Run Time</label>
+          <input
+            className="modal-input"
+            type="time"
+            value={form.run_time}
+            onChange={e => setForm(f => ({ ...f, run_time: e.target.value }))}
+          />
+
+          <div className="modal-checks">
+            <label className="modal-check-label">
+              <input type="checkbox" checked={form.notify_email}
+                onChange={e => setForm(f => ({ ...f, notify_email: e.target.checked }))} />
+              Email
+            </label>
+            <label className="modal-check-label">
+              <input type="checkbox" checked={form.notify_telegram}
+                onChange={e => setForm(f => ({ ...f, notify_telegram: e.target.checked }))} />
+              Telegram
+            </label>
           </div>
-        </div>
+
+          <div className="modal-footer">
+            <button className="btn-sm" onClick={() => setShowModal(false)}>Cancel</button>
+            <button className="btn-save" onClick={handleSave}>Save</button>
+          </div>
+        </Modal>
       )}
     </div>
   )

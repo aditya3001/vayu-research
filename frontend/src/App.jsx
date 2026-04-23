@@ -11,14 +11,16 @@ export default function App() {
     <BrowserRouter>
       <div className="app">
         <Sidebar />
-        <div className="app-main">
-          <Routes>
-            <Route path="/" element={<PromptsPage />} />
-            <Route path="/prompt/:promptId" element={<PromptRunner />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="/schedules" element={<SchedulesPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Routes>
+        <div className="app-body">
+          <main className="app-main">
+            <Routes>
+              <Route path="/"                element={<PromptsPage />} />
+              <Route path="/prompt/:promptId" element={<PromptRunner />} />
+              <Route path="/history"          element={<HistoryPage />} />
+              <Route path="/schedules"        element={<SchedulesPage />} />
+              <Route path="/settings"         element={<SettingsPage />} />
+            </Routes>
+          </main>
         </div>
       </div>
     </BrowserRouter>

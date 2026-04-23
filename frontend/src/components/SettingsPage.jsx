@@ -10,7 +10,7 @@ const Toggle = ({ checked, onChange }) => (
 
 const ConnectedDot = ({ active }) => (
   <span className={active ? 'status-connected' : 'status-disconnected'}>
-    {active ? 'Connected' : 'Not configured'}
+    {active ? '● Connected' : '○ Not configured'}
   </span>
 )
 
@@ -37,11 +37,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="page" style={{ maxWidth: '560px' }}>
+    <div className="page" style={{ maxWidth: 580 }}>
       <h1 className="page-title">Settings</h1>
       <p className="page-sub">
         API keys live in{' '}
-        <code style={{ background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1px 5px', fontSize: '12px' }}>.env</code>
+        <code style={{ background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1px 6px', fontSize: 12 }}>.env</code>
         {' '}— only runtime preferences are here.
       </p>
 
@@ -51,17 +51,17 @@ export default function SettingsPage() {
         <div className="settings-card">
           <div className="settings-row">
             {activeConfig ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flexWrap: 'wrap', flex: 1 }}>
                 <span className="settings-model-chip">{activeConfig.model}</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
                   {{ anthropic: 'Anthropic', openai: 'OpenAI', openrouter: 'OpenRouter' }[activeConfig.provider] || activeConfig.provider}
                 </span>
-                <span style={{ marginLeft: 'auto', color: 'var(--text-faint)', fontSize: '10px', fontStyle: 'italic' }}>
+                <span style={{ marginLeft: 'auto', color: 'var(--text-faint)', fontSize: 10, fontStyle: 'italic' }}>
                   via DEFAULT_MODEL in .env
                 </span>
               </div>
             ) : (
-              <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Loading…</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Loading…</span>
             )}
           </div>
         </div>
@@ -73,46 +73,44 @@ export default function SettingsPage() {
         <div className="settings-card">
 
           {/* Email */}
-          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
               <div className="settings-row-info">
                 <div className="settings-row-title">Email</div>
                 <div className="settings-row-sub">GMAIL_ADDRESS + GMAIL_APP_PASSWORD</div>
               </div>
               {settings.email_configured
                 ? <Toggle checked={settings.email_enabled} onChange={v => save({ email_enabled: v })} />
-                : <ConnectedDot active={false} />
-              }
+                : <ConnectedDot active={false} />}
             </div>
             {settings.email_configured && !settings.email_enabled && (
-              <div className="settings-notice warn" style={{ marginTop: 'var(--space-sm)', animation: 's-fade 0.2s ease' }}>
+              <div className="settings-notice warn" style={{ animation: 's-fade 0.2s ease' }}>
                 Notifications paused — scheduled runs will not send emails
               </div>
             )}
           </div>
 
           {/* Telegram */}
-          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
               <div className="settings-row-info">
                 <div className="settings-row-title">Telegram</div>
                 <div className="settings-row-sub">TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID</div>
               </div>
               {settings.telegram_configured
                 ? <Toggle checked={settings.telegram_enabled} onChange={v => save({ telegram_enabled: v })} />
-                : <ConnectedDot active={false} />
-              }
+                : <ConnectedDot active={false} />}
             </div>
             {settings.telegram_configured && !settings.telegram_enabled && (
-              <div className="settings-notice warn" style={{ marginTop: 'var(--space-sm)', animation: 's-fade 0.2s ease' }}>
+              <div className="settings-notice warn" style={{ animation: 's-fade 0.2s ease' }}>
                 Notifications paused — scheduled runs will not send Telegram messages
               </div>
             )}
           </div>
 
           {/* OpenRouter */}
-          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
               <div className="settings-row-info">
                 <div className="settings-row-title">OpenRouter</div>
                 <div className="settings-row-sub">OPENROUTER_API_KEY in .env — access any model</div>
@@ -120,15 +118,15 @@ export default function SettingsPage() {
               <ConnectedDot active={settings.openrouter_configured} />
             </div>
             {settings.openrouter_configured && (
-              <div className="settings-notice" style={{ marginTop: 'var(--space-sm)' }}>
+              <div className="settings-notice" style={{ animation: 's-fade 0.2s ease' }}>
                 Set <code>DEFAULT_PROVIDER=openrouter</code> and <code>DEFAULT_MODEL=openrouter/auto</code> in .env to use auto-routing
               </div>
             )}
           </div>
 
           {/* Notion */}
-          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
               <div className="settings-row-info">
                 <div className="settings-row-title">Notion</div>
                 <div className="settings-row-sub">NOTION_TOKEN in .env</div>
@@ -137,11 +135,11 @@ export default function SettingsPage() {
             </div>
 
             {settings.notion_configured && (
-              <div style={{ marginTop: 'var(--space-md)', animation: 's-fade 0.2s ease' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-xs)' }}>
-                  <label style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Page ID</label>
+              <div style={{ animation: 's-fade 0.2s ease' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <label style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>Page ID</label>
                   {settings.notion_page_id_from_env && (
-                    <span style={{ fontSize: '10px', color: 'var(--text-faint)', fontStyle: 'italic' }}>via NOTION_PAGE_ID env var</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-faint)', fontStyle: 'italic' }}>via NOTION_PAGE_ID env var</span>
                   )}
                 </div>
                 <input
@@ -153,15 +151,15 @@ export default function SettingsPage() {
                   readOnly={settings.notion_page_id_from_env}
                 />
                 {!settings.notion_page_id_from_env && (
-                  <p style={{ color: 'var(--text-faint)', fontSize: '11px', margin: '5px 0 var(--space-md)' }}>
+                  <p style={{ color: 'var(--text-faint)', fontSize: 11, margin: '5px 0 12px' }}>
                     Or set NOTION_PAGE_ID in .env to configure server-side.
                   </p>
                 )}
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-sm) var(--space-md)', background: 'var(--bg-muted)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px var(--space-md)', background: 'var(--bg-muted)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', marginTop: 8 }}>
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>Auto-save to Notion</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Save every result automatically after running</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Auto-save to Notion</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Save every result automatically after running</div>
                   </div>
                   <Toggle checked={settings.auto_save_notion} onChange={v => save({ auto_save_notion: v })} />
                 </div>
@@ -172,7 +170,7 @@ export default function SettingsPage() {
       </div>
 
       {saved && (
-        <div className="settings-saved" style={{ animation: 's-fade 0.2s ease' }}>✓ Saved</div>
+        <div className="settings-saved">✓ Saved</div>
       )}
     </div>
   )

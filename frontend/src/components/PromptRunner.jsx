@@ -3,13 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getPrompt, runPrompt, saveToNotion, getConfig } from '../api'
+import { CatBadge } from './ui/Badge'
 
 const STATUS_MESSAGES = [
-  'Sending request to model...',
-  'Waiting for response...',
-  'Generating analysis...',
-  'Composing output...',
-  'Almost there...',
+  'Sending request to model…',
+  'Waiting for response…',
+  'Generating analysis…',
+  'Composing output…',
+  'Almost there…',
 ]
 
 function Loader({ elapsed, model }) {
@@ -29,12 +30,12 @@ function Loader({ elapsed, model }) {
           <div className="loader-ring-outer" />
           <div className="loader-ring-inner" />
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div className="loader-status" key={msgIdx} style={{ animation: 'vr-fade-in 0.4s ease' }}>
             {STATUS_MESSAGES[msgIdx]}
           </div>
           <div className="loader-meta">
-            {model && <span style={{ marginRight: '8px' }}>{model.model}</span>}
+            {model && <span style={{ marginRight: 8 }}>{model.model}</span>}
             {elapsed < 5
               ? 'processing your request'
               : elapsed < 15
@@ -49,11 +50,8 @@ function Loader({ elapsed, model }) {
       </div>
       <div className="loader-dots">
         {[0, 1, 2].map(i => (
-          <div
-            key={i}
-            className="loader-dot"
-            style={{ animation: `vr-dot 1.4s ease-in-out ${i * 0.16}s infinite` }}
-          />
+          <div key={i} className="loader-dot"
+            style={{ animation: `vr-dot 1.4s ease-in-out ${i * 0.16}s infinite` }} />
         ))}
       </div>
     </div>
@@ -66,7 +64,7 @@ function PromptTextView({ text }) {
     <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: 'var(--text-muted)', fontSize: '12px', lineHeight: '1.8', margin: 0, fontFamily: 'inherit' }}>
       {parts.map((part, i) =>
         /^\[[^\]]+\]$/.test(part)
-          ? <mark key={i} style={{ background: 'var(--cat-quick-bg)', color: 'var(--cat-quick-text)', borderRadius: '3px', padding: '0 3px', fontWeight: 500 }}>{part}</mark>
+          ? <mark key={i} style={{ background: 'var(--cat-quick-bg)', color: 'var(--cat-quick-text)', borderRadius: 3, padding: '0 3px', fontWeight: 500 }}>{part}</mark>
           : <span key={i}>{part}</span>
       )}
     </pre>
@@ -76,20 +74,20 @@ function PromptTextView({ text }) {
 export default function PromptRunner() {
   const { promptId } = useParams()
   const navigate = useNavigate()
-  const [prompt, setPrompt] = useState(null)
-  const [inputs, setInputs] = useState({})
-  const [rawDates, setRawDates] = useState({})
-  const [fullConfig, setFullConfig] = useState(null)
-  const [activeModel, setActiveModel] = useState(null)
-  const [result, setResult] = useState('')
-  const [usedModel, setUsedModel] = useState(null)
-  const [historyId, setHistoryId] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [elapsed, setElapsed] = useState(0)
-  const [error, setError] = useState('')
+  const [prompt, setPrompt]               = useState(null)
+  const [inputs, setInputs]               = useState({})
+  const [rawDates, setRawDates]           = useState({})
+  const [fullConfig, setFullConfig]       = useState(null)
+  const [activeModel, setActiveModel]     = useState(null)
+  const [result, setResult]               = useState('')
+  const [usedModel, setUsedModel]         = useState(null)
+  const [historyId, setHistoryId]         = useState(null)
+  const [loading, setLoading]             = useState(false)
+  const [elapsed, setElapsed]             = useState(0)
+  const [error, setError]                 = useState('')
   const [showPromptText, setShowPromptText] = useState(false)
-  const [showTip, setShowTip] = useState(false)
-  const [notionStatus, setNotionStatus] = useState('')
+  const [showTip, setShowTip]             = useState(false)
+  const [notionStatus, setNotionStatus]   = useState('')
   const timerRef = useRef(null)
 
   useEffect(() => {
@@ -108,8 +106,8 @@ export default function PromptRunner() {
 
   useEffect(() => {
     if (!fullConfig) return
-    const cat = prompt?.category || ''
-    const catCfg = fullConfig.category_config?.[cat]
+    const cat     = prompt?.category || ''
+    const catCfg  = fullConfig.category_config?.[cat]
     const catModel = fullConfig.live_mode === 'live' ? catCfg?.live_model : catCfg?.demo_model
     if (catModel) {
       setActiveModel({ provider: catCfg.provider || fullConfig.provider, model: catModel })
@@ -118,9 +116,7 @@ export default function PromptRunner() {
     }
   }, [prompt, fullConfig])
 
-  useEffect(() => {
-    getConfig().then(c => setFullConfig(c))
-  }, [])
+  useEffect(() => { getConfig().then(c => setFullConfig(c)) }, [])
 
   const startTimer = () => {
     setElapsed(0)
@@ -129,11 +125,7 @@ export default function PromptRunner() {
   const stopTimer = () => clearInterval(timerRef.current)
 
   const handleRun = async () => {
-    setLoading(true)
-    setError('')
-    setResult('')
-    setHistoryId(null)
-    setNotionStatus('')
+    setLoading(true); setError(''); setResult(''); setHistoryId(null); setNotionStatus('')
     startTimer()
     try {
       const data = await runPrompt(promptId, inputs)
@@ -144,8 +136,7 @@ export default function PromptRunner() {
     } catch (e) {
       setError(e.response?.data?.detail || 'Something went wrong')
     } finally {
-      setLoading(false)
-      stopTimer()
+      setLoading(false); stopTimer()
     }
   }
 
@@ -153,11 +144,9 @@ export default function PromptRunner() {
 
   const handleDownload = () => {
     const blob = new Blob([result], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${promptId}-result.md`
-    a.click()
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url; a.download = `${promptId}-result.md`; a.click()
     URL.revokeObjectURL(url)
   }
 
@@ -172,23 +161,30 @@ export default function PromptRunner() {
     }
   }
 
-  if (!prompt) return <div className="page" style={{ color: 'var(--text-muted)' }}>Loading...</div>
+  if (!prompt) {
+    return (
+      <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: 13, fontFamily: 'var(--font-mono)' }}>Loading…</div>
+      </div>
+    )
+  }
 
   return (
     <div className="runner">
-      {/* Left column — form */}
+      {/* ── Left: form panel ─────────────────────────────────────────── */}
       <div className="runner-form">
-        <button className="back-link" onClick={() => navigate('/')}>← Library</button>
+        <button className="back-link" onClick={() => navigate('/')}>
+          ← Library
+        </button>
 
-        <span className={`cat-badge ${prompt.category}`}>
-          {(prompt.category || '').replace(/-/g, ' ')}
-        </span>
+        <CatBadge category={prompt.category} />
         <h1 className="runner-title">{prompt.name}</h1>
         {prompt.description && (
           <p className="runner-desc">{prompt.description}</p>
         )}
 
-        <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)', flexWrap: 'wrap' }}>
+        {/* Toggle buttons */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
           <button className="btn-ghost" onClick={() => setShowPromptText(v => !v)}>
             {showPromptText ? '▲ Hide Prompt' : '▼ View Prompt'}
           </button>
@@ -214,6 +210,7 @@ export default function PromptRunner() {
           </div>
         )}
 
+        {/* Inputs */}
         {(prompt.placeholders || []).length > 0 && (
           <div style={{ marginTop: 'var(--space-md)' }}>
             {(prompt.placeholders || []).map(key => {
@@ -253,14 +250,14 @@ export default function PromptRunner() {
 
         {activeModel && !loading && (
           <div className="model-pill">
-            <span style={{ fontSize: '11px', color: 'var(--text-faint)' }}>via</span>
+            <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>via</span>
             <span className="model-tag">{activeModel.model}</span>
             <button className="model-change" onClick={() => navigate('/settings')}>change</button>
           </div>
         )}
       </div>
 
-      {/* Right column — output */}
+      {/* ── Right: output panel ───────────────────────────────────────── */}
       <div className="runner-output">
         {loading && <Loader elapsed={elapsed} model={activeModel} />}
 
@@ -271,7 +268,7 @@ export default function PromptRunner() {
         {result && !loading && (
           <div style={{ animation: 'vr-fade-in 0.3s ease' }}>
             <div className="output-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <span className="output-label">Result</span>
                 {usedModel && (
                   <span className="model-badge">{usedModel.provider} / {usedModel.model}</span>
@@ -280,7 +277,7 @@ export default function PromptRunner() {
               <div className="action-bar">
                 {notionStatus === 'saved' && <span className="success-text">✓ Saved to Notion</span>}
                 {notionStatus && notionStatus !== 'saved' && notionStatus !== 'saving' && (
-                  <span style={{ fontSize: '11px', color: 'var(--color-danger)' }}>Notion failed</span>
+                  <span style={{ fontSize: 11, color: 'var(--color-danger)' }}>Notion failed</span>
                 )}
                 <button
                   className="btn-action"
@@ -300,8 +297,11 @@ export default function PromptRunner() {
         )}
 
         {!loading && !result && !error && (
-          <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>
-            Fill in the form and click Run →
+          <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+            <div style={{ color: 'var(--text-faint)', fontSize: 24 }}>→</div>
+            <div style={{ color: 'var(--text-faint)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>
+              Fill in the form and click Run
+            </div>
           </div>
         )}
       </div>

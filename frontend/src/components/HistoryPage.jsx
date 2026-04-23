@@ -3,11 +3,13 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getHistory, deleteHistory, downloadHistory } from '../api'
 import ConfirmDialog from './ConfirmDialog'
+import EmptyState from './ui/EmptyState'
 
 export default function HistoryPage() {
-  const [items, setItems] = useState([])
+  const [items, setItems]       = useState([])
   const [selected, setSelected] = useState(null)
   const [confirmId, setConfirmId] = useState(null)
+  const [listOpen, setListOpen] = useState(true)
 
   const load = () => getHistory().then(data => {
     setItems(data)
@@ -16,10 +18,7 @@ export default function HistoryPage() {
 
   useEffect(() => { load() }, [])
 
-  const handleDelete = (id, e) => {
-    e.stopPropagation()
-    setConfirmId(id)
-  }
+  const handleDelete = (id, e) => { e.stopPropagation(); setConfirmId(id) }
 
   const confirmDelete = async () => {
     await deleteHistory(confirmId)
@@ -52,33 +51,40 @@ export default function HistoryPage() {
         />
       )}
 
-      {/* Left panel — list */}
-      <div className="history-list">
+      {/* ── Left: list panel ─────────────────────────────────────────── */}
+      <div className={`history-list${listOpen ? '' : ' collapsed'}`}>
         <div className="history-list-header">
-          <h1 className="page-title" style={{ fontSize: '16px' }}>History</h1>
-          <p className="page-sub" style={{ marginBottom: 0 }}>
-            {items.length} result{items.length !== 1 ? 's' : ''}
-          </p>
+          <div>
+            <h1 className="page-title" style={{ fontSize: 16 }}>History</h1>
+            <p className="page-sub" style={{ marginBottom: 0 }}>
+              {items.length} result{items.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <button className="history-list-toggle" onClick={() => setListOpen(false)} title="Collapse list">‹</button>
         </div>
 
         <div className="history-items">
           {items.length === 0 && (
-            <p style={{ color: 'var(--text-muted)', fontSize: '12px', padding: 'var(--space-md) var(--space-sm)' }}>
-              No history yet. Run a prompt to get started.
-            </p>
+            <EmptyState
+              title="No history yet"
+              description="Run a prompt to see results here."
+            />
           )}
           {items.map(h => (
             <div
               key={h.id}
-              className={'history-item' + (selected?.id === h.id ? ' selected' : '')}
-              onClick={() => setSelected(h)}
+              className={`history-item${selected?.id === h.id ? ' selected' : ''}`}
+              onClick={() => {
+                setSelected(h)
+                if (window.innerWidth < 768) setListOpen(false)
+              }}
             >
-              <div style={{ minWidth: 0 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <div className="history-item-name">{h.prompt_name}</div>
                 <div className="history-item-meta">
                   {fmt(h.created_at)}
                   {h.model_used && (
-                    <span style={{ marginLeft: 'var(--space-xs)', color: 'var(--text-faint)' }}>
+                    <span style={{ marginLeft: 4, color: 'var(--text-faint)' }}>
                       · {h.model_used.split('/')[1] || h.model_used}
                     </span>
                   )}
@@ -87,28 +93,31 @@ export default function HistoryPage() {
                   <div className="history-item-inputs">{inputSummary(h.inputs)}</div>
                 )}
               </div>
-              <button className="history-delete" onClick={e => handleDelete(h.id, e)}>✕</button>
+              <button className="history-delete" onClick={e => handleDelete(h.id, e)} title="Delete">✕</button>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Right panel — viewer */}
+      {/* ── Right: viewer panel ──────────────────────────────────────── */}
       <div className="history-viewer">
         {selected ? (
           <>
             <div className="history-viewer-header">
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
+              {!listOpen && (
+                <button className="history-list-expand" onClick={() => setListOpen(true)} title="Show list">≡</button>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>
                   {selected.prompt_name}
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   {fmt(selected.created_at)}
                   {selected.model_used && (
                     <span className="model-badge">{selected.model_used}</span>
                   )}
                   {inputSummary(selected.inputs) && (
-                    <span> · {inputSummary(selected.inputs)}</span>
+                    <span>· {inputSummary(selected.inputs)}</span>
                   )}
                 </div>
               </div>
@@ -123,7 +132,14 @@ export default function HistoryPage() {
             </div>
           </>
         ) : (
-          <div className="history-empty">Select a result to view</div>
+          <div className="history-empty">
+            {!listOpen && (
+              <button className="history-list-expand" onClick={() => setListOpen(true)} style={{ marginBottom: 8 }}>≡</button>
+            )}
+            <div style={{ color: 'var(--text-faint)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>
+              Select a result to view
+            </div>
+          </div>
         )}
       </div>
     </div>
