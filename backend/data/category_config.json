@@ -1,7 +1,7 @@
 {
   "market-intelligence": {
     "provider": "openrouter",
-    "live_model": "perplexity/sonar",
+    "live_model": "anthropic/claude-opus-4.6",
     "demo_model": "openrouter/free",
     "notion_page_id": "34854e21b95680d39e23ebb4308c70df"
   },
