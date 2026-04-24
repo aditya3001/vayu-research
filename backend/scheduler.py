@@ -86,7 +86,8 @@ def _run_scheduled_job(schedule_id: int):
             inputs=schedule.inputs,
             result=result,
             source="scheduled",
-            model_used=f"{provider}/{model}"
+            model_used=f"{provider}/{model}",
+            user_id=schedule.user_id,
         )
         db.add(entry)
         schedule.last_run_at = datetime.utcnow()
