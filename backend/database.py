@@ -29,16 +29,61 @@ def get_db():
         db.close()
 
 def run_migrations():
-    """Add columns that may be missing from an existing schema."""
+    """
+    Idempotent migrations — safe to run on every startup.
+    No backward compatibility: existing rows without user_id are dropped.
+    """
     from sqlalchemy import text
     with engine.connect() as conn:
+        # ── Legacy schema migrations (kept for safety) ──────────────────
         for table, col, definition in [
-            ("schedules", "provider", "VARCHAR DEFAULT 'anthropic'"),
+            ("schedules", "provider",   "VARCHAR DEFAULT 'anthropic'"),
             ("schedules", "model_name", "VARCHAR"),
-            ("history", "model_used", "VARCHAR"),
+            ("history",   "model_used", "VARCHAR"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {definition}"))
                 conn.commit()
             except Exception:
                 pass  # column already exists
+
+        # ── user_id migration ────────────────────────────────────────────
+        # Drop all existing rows — no backward compat
+        for table in ("history", "schedules", "settings"):
+            try:
+                conn.execute(text(f"DELETE FROM {table}"))
+                conn.commit()
+            except Exception:
+                pass
+
+        # Add user_id to history
+        try:
+            conn.execute(text("ALTER TABLE history ADD COLUMN user_id VARCHAR NOT NULL DEFAULT ''"))
+            conn.execute(text("ALTER TABLE history ALTER COLUMN user_id DROP DEFAULT"))
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+
+        # Add user_id to schedules
+        try:
+            conn.execute(text("ALTER TABLE schedules ADD COLUMN user_id VARCHAR NOT NULL DEFAULT ''"))
+            conn.execute(text("ALTER TABLE schedules ALTER COLUMN user_id DROP DEFAULT"))
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+
+        # settings: add user_id + change PK to (user_id, key)
+        try:
+            conn.execute(text("ALTER TABLE settings ADD COLUMN user_id VARCHAR NOT NULL DEFAULT ''"))
+            conn.execute(text("ALTER TABLE settings ALTER COLUMN user_id DROP DEFAULT"))
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+
+        # Drop old single-column PK and add composite PK (PostgreSQL only)
+        try:
+            conn.execute(text("ALTER TABLE settings DROP CONSTRAINT settings_pkey"))
+            conn.execute(text("ALTER TABLE settings ADD PRIMARY KEY (user_id, key)"))
+            conn.commit()
+        except Exception:
+            pass  # constraint already updated or not supported
