@@ -6,6 +6,7 @@ import json, re
 from database import get_db
 from models import Schedule
 from scheduler import register_schedule, unregister_schedule
+from auth import get_current_user
 
 router = APIRouter()
 
@@ -135,12 +136,12 @@ def _serialize(s: Schedule) -> dict:
 
 
 @router.get("/schedules")
-def list_schedules(db: Session = Depends(get_db)):
-    return [_serialize(s) for s in db.query(Schedule).order_by(Schedule.created_at.desc()).all()]
+def list_schedules(user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    return [_serialize(s) for s in db.query(Schedule).filter(Schedule.user_id == user_id).order_by(Schedule.created_at.desc()).all()]
 
 
 @router.post("/schedules")
-def create_schedule(payload: ScheduleCreate, db: Session = Depends(get_db)):
+def create_schedule(payload: ScheduleCreate, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
     s = Schedule(
         prompt_id=payload.prompt_id,
         prompt_name=payload.prompt_name,
@@ -152,7 +153,8 @@ def create_schedule(payload: ScheduleCreate, db: Session = Depends(get_db)):
         model_name=payload.model_name,
         notify_email=payload.notify_email,
         notify_telegram=payload.notify_telegram,
-        is_active=True
+        is_active=True,
+        user_id=user_id
     )
     db.add(s)
     db.commit()
@@ -162,8 +164,8 @@ def create_schedule(payload: ScheduleCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/schedules/{schedule_id}")
-def update_schedule(schedule_id: int, payload: ScheduleUpdate, db: Session = Depends(get_db)):
-    s = db.query(Schedule).filter(Schedule.id == schedule_id).first()
+def update_schedule(schedule_id: int, payload: ScheduleUpdate, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    s = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.user_id == user_id).first()
     if not s:
         raise HTTPException(status_code=404, detail="Not found")
     for field, value in payload.model_dump(exclude_none=True).items():
@@ -178,8 +180,8 @@ def update_schedule(schedule_id: int, payload: ScheduleUpdate, db: Session = Dep
 
 
 @router.delete("/schedules/{schedule_id}")
-def delete_schedule(schedule_id: int, db: Session = Depends(get_db)):
-    s = db.query(Schedule).filter(Schedule.id == schedule_id).first()
+def delete_schedule(schedule_id: int, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    s = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.user_id == user_id).first()
     if not s:
         raise HTTPException(status_code=404, detail="Not found")
     unregister_schedule(schedule_id)
@@ -189,8 +191,8 @@ def delete_schedule(schedule_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/schedules/{schedule_id}/toggle")
-def toggle_schedule(schedule_id: int, db: Session = Depends(get_db)):
-    s = db.query(Schedule).filter(Schedule.id == schedule_id).first()
+def toggle_schedule(schedule_id: int, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    s = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.user_id == user_id).first()
     if not s:
         raise HTTPException(status_code=404, detail="Not found")
     s.is_active = not s.is_active

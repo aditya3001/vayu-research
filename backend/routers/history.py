@@ -4,13 +4,14 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import History
 from routers.settings import get_setting
+from auth import get_current_user
 import json
 
 router = APIRouter()
 
 @router.get("/history")
-def list_history(db: Session = Depends(get_db)):
-    items = db.query(History).order_by(History.created_at.desc()).all()
+def list_history(user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    items = db.query(History).filter(History.user_id == user_id).order_by(History.created_at.desc()).all()
     return [
         {
             "id": h.id,
@@ -26,8 +27,8 @@ def list_history(db: Session = Depends(get_db)):
     ]
 
 @router.get("/history/{item_id}")
-def get_history(item_id: int, db: Session = Depends(get_db)):
-    h = db.query(History).filter(History.id == item_id).first()
+def get_history(item_id: int, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    h = db.query(History).filter(History.id == item_id, History.user_id == user_id).first()
     if not h:
         raise HTTPException(status_code=404, detail="Not found")
     return {
@@ -41,8 +42,8 @@ def get_history(item_id: int, db: Session = Depends(get_db)):
     }
 
 @router.delete("/history/{item_id}")
-def delete_history(item_id: int, db: Session = Depends(get_db)):
-    h = db.query(History).filter(History.id == item_id).first()
+def delete_history(item_id: int, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    h = db.query(History).filter(History.id == item_id, History.user_id == user_id).first()
     if not h:
         raise HTTPException(status_code=404, detail="Not found")
     db.delete(h)
@@ -50,13 +51,13 @@ def delete_history(item_id: int, db: Session = Depends(get_db)):
     return {"ok": True}
 
 @router.post("/history/{item_id}/notion")
-def save_to_notion(item_id: int, db: Session = Depends(get_db)):
-    h = db.query(History).filter(History.id == item_id).first()
+def save_to_notion(item_id: int, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    h = db.query(History).filter(History.id == item_id, History.user_id == user_id).first()
     if not h:
         raise HTTPException(status_code=404, detail="Not found")
     import config as cfg
     token = cfg.NOTION_TOKEN
-    page_id = cfg.NOTION_PAGE_ID or get_setting(db, "notion_page_id")
+    page_id = cfg.NOTION_PAGE_ID or get_setting(db, "notion_page_id", user_id)
     if not token or not page_id:
         raise HTTPException(status_code=400, detail="Notion not configured. Add token and page ID in Settings.")
     from notifier import send_notion_page
@@ -73,19 +74,19 @@ def save_to_notion(item_id: int, db: Session = Depends(get_db)):
     return {"ok": True}
 
 @router.get("/notion/test")
-def test_notion(db: Session = Depends(get_db)):
+def test_notion(user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
     import config as cfg
     from notifier import test_notion_connection
     token = cfg.NOTION_TOKEN
-    page_id = cfg.NOTION_PAGE_ID or get_setting(db, "notion_page_id")
+    page_id = cfg.NOTION_PAGE_ID or get_setting(db, "notion_page_id", user_id)
     if not token:
         raise HTTPException(status_code=400, detail="NOTION_TOKEN not set in environment.")
     if not page_id:
-        raise HTTPException(status_code=400, detail="Notion page ID not set. Add NOTION_PAGE_ID to .env or set it in Settings.")
+        raise HTTPException(status_code=400, detail="Notion page ID not set.")
     return test_notion_connection(token, page_id)
 
 @router.get("/notion/test-dbs")
-def test_notion_dbs():
+def test_notion_dbs(user_id: str = Depends(get_current_user)):
     import config as cfg
     import requests
     token = cfg.NOTION_TOKEN
@@ -113,9 +114,9 @@ def test_notion_dbs():
                 page_title = title_parts[0]["plain_text"] if title_parts else "(untitled)"
                 results[category] = {"ok": True, "title": page_title}
             elif resp.status_code == 404:
-                results[category] = {"ok": False, "error": "Page not found — check the ID and share it with your integration"}
+                results[category] = {"ok": False, "error": "Page not found"}
             elif resp.status_code == 403:
-                results[category] = {"ok": False, "error": "Integration lacks access — open the page in Notion → ··· → Connections → add your integration"}
+                results[category] = {"ok": False, "error": "Integration lacks access"}
             else:
                 msg = resp.json().get("message", resp.text[:150])
                 results[category] = {"ok": False, "error": f"Notion {resp.status_code}: {msg}"}
@@ -124,8 +125,8 @@ def test_notion_dbs():
     return results
 
 @router.get("/history/{item_id}/download")
-def download_history(item_id: int, db: Session = Depends(get_db)):
-    h = db.query(History).filter(History.id == item_id).first()
+def download_history(item_id: int, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    h = db.query(History).filter(History.id == item_id, History.user_id == user_id).first()
     if not h:
         raise HTTPException(status_code=404, detail="Not found")
     filename = f"{h.prompt_name.replace(' ', '-').lower()}-{h.id}.md"

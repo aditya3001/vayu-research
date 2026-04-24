@@ -1,6 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pathlib import Path
 import json, re
+from auth import get_current_user
 
 router = APIRouter()
 
@@ -17,7 +18,7 @@ def load_prompts():
     return prompts
 
 @router.get("/prompts")
-def list_prompts():
+def list_prompts(_: str = Depends(get_current_user)):
     prompts = load_prompts()
     grouped = {}
     for p in prompts:
@@ -28,7 +29,7 @@ def list_prompts():
     return grouped
 
 @router.get("/prompts/{prompt_id}")
-def get_prompt(prompt_id: str):
+def get_prompt(prompt_id: str, _: str = Depends(get_current_user)):
     prompts = load_prompts()
     for p in prompts:
         if p["id"] == prompt_id:

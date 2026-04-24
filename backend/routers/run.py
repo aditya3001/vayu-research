@@ -7,6 +7,7 @@ from database import get_db
 from models import History
 from routers.prompts import load_prompts
 from routers.settings import get_setting
+from auth import get_current_user
 import config
 
 router = APIRouter()
@@ -129,7 +130,7 @@ def _call_llm(provider: str, model: str, content: str, db: Session) -> str:
 
 
 @router.post("/run")
-def run_prompt(req: RunRequest, db: Session = Depends(get_db)):
+def run_prompt(req: RunRequest, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
     logger.info(f"[RUN] prompt={req.prompt_id} inputs={list(req.inputs.keys())}")
 
     prompts = load_prompts()
@@ -168,7 +169,8 @@ def run_prompt(req: RunRequest, db: Session = Depends(get_db)):
         inputs=json.dumps(req.inputs),
         result=result,
         source="manual",
-        model_used=f"{provider}/{model}"
+        model_used=f"{provider}/{model}",
+        user_id=user_id
     )
     db.add(entry)
     db.commit()
@@ -176,7 +178,7 @@ def run_prompt(req: RunRequest, db: Session = Depends(get_db)):
     logger.info(f"[RUN] saved to history id={entry.id}")
 
     notion_saved = False
-    auto_save = get_setting(db, "auto_save_notion") == "true"
+    auto_save = get_setting(db, "auto_save_notion", user_id) == "true"
     if auto_save:
         notion_token = config.NOTION_TOKEN
         if notion_token:
@@ -188,7 +190,7 @@ def run_prompt(req: RunRequest, db: Session = Depends(get_db)):
             meta = {"Date": date_str, "Model": f"{provider}/{model}", "Category": category, "Source": "manual", "Inputs": inputs_summary}
 
             cat_page_id = config.CATEGORY_CONFIG.get(category, {}).get("notion_page_id", "")
-            notion_page_id = cat_page_id or config.NOTION_PAGE_ID or get_setting(db, "notion_page_id")
+            notion_page_id = cat_page_id or config.NOTION_PAGE_ID or get_setting(db, "notion_page_id", user_id)
             if notion_page_id:
                 logger.info(f"[RUN] saving to Notion page={notion_page_id[:8]}… (category={category or 'default'})")
                 notion_saved, notion_err = send_notion_page(notion_token, notion_page_id, title, result, metadata=meta)
@@ -207,7 +209,7 @@ def run_prompt(req: RunRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/run/raw")
-def run_raw(req: RawRunRequest, db: Session = Depends(get_db)):
+def run_raw(req: RawRunRequest, _: str = Depends(get_current_user), db: Session = Depends(get_db)):
     provider, model = config.resolve_model(req.provider, req.model)
     logger.info(f"[RAW] calling {provider}/{model} — prompt_len={len(req.text)} chars")
 

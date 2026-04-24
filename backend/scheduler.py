@@ -56,7 +56,7 @@ def _run_scheduled_job(schedule_id: int):
             result = response.choices[0].message.content
         elif provider == "openai":
             from openai import OpenAI
-            api_key = config.OPENAI_API_KEY or get_setting(db, "openai_api_key")
+            api_key = config.OPENAI_API_KEY or get_setting(db, "openai_api_key", schedule.user_id)
             if not api_key:
                 logger.error(f"[SCHED:{schedule_id}] OpenAI API key not set")
                 return
@@ -69,7 +69,7 @@ def _run_scheduled_job(schedule_id: int):
             result = response.choices[0].message.content
         else:  # anthropic
             import anthropic
-            api_key = config.ANTHROPIC_API_KEY or get_setting(db, "anthropic_api_key")
+            api_key = config.ANTHROPIC_API_KEY or get_setting(db, "anthropic_api_key", schedule.user_id)
             client = anthropic.Anthropic(api_key=api_key)
             message = client.messages.create(
                 model=model,
@@ -94,7 +94,7 @@ def _run_scheduled_job(schedule_id: int):
         logger.info(f"[SCHED:{schedule_id}] saved to history")
 
         cat_page_id = config.CATEGORY_CONFIG.get(category, {}).get("notion_page_id", "")
-        notion_page_id = cat_page_id or config.NOTION_PAGE_ID or get_setting(db, "notion_page_id")
+        notion_page_id = cat_page_id or config.NOTION_PAGE_ID or get_setting(db, "notion_page_id", schedule.user_id)
         if notion_page_id:
             from notifier import send_notion_page
             from datetime import datetime as _dt
@@ -111,7 +111,7 @@ def _run_scheduled_job(schedule_id: int):
         subject = f"[Vayu Research] {schedule.prompt_name} — {datetime.utcnow().strftime('%Y-%m-%d')}"
 
         if schedule.notify_email:
-            email_enabled = get_setting(db, "email_enabled") != "false"
+            email_enabled = get_setting(db, "email_enabled", schedule.user_id) != "false"
             if not email_enabled:
                 logger.info(f"[SCHED:{schedule_id}] email notifications disabled globally — skipping")
             elif config.GMAIL_ADDRESS and config.GMAIL_APP_PASSWORD:
@@ -121,7 +121,7 @@ def _run_scheduled_job(schedule_id: int):
                 logger.warning(f"[SCHED:{schedule_id}] email skipped — GMAIL_ADDRESS/GMAIL_APP_PASSWORD not set")
 
         if schedule.notify_telegram:
-            telegram_enabled = get_setting(db, "telegram_enabled") != "false"
+            telegram_enabled = get_setting(db, "telegram_enabled", schedule.user_id) != "false"
             if not telegram_enabled:
                 logger.info(f"[SCHED:{schedule_id}] Telegram notifications disabled globally — skipping")
             elif config.TELEGRAM_BOT_TOKEN and config.TELEGRAM_CHAT_ID:
