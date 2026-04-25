@@ -121,9 +121,9 @@ export default function HistoryPage() {
                   )}
                 </div>
               </div>
-              <a className="download-btn" href={downloadHistory(selected.id)} download>
+              <button className="download-btn" onClick={() => downloadHistory(selected.id)}>
                 ⬇ Download .md
-              </a>
+              </button>
             </div>
             <div className="history-viewer-body">
               <div className="md">
