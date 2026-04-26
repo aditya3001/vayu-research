@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { AuthProvider, ProtectedRoute, LoginPage, SignupPage } from './auth'
+import { AuthProvider, ProtectedRoute, LoginPage, SignupPage, OAuthCallbackPage } from './auth'
 import Sidebar from './components/Sidebar'
 import PromptsPage from './components/PromptsPage'
 import PromptRunner from './components/PromptRunner'
@@ -31,8 +31,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/login"  element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/login"         element={<LoginPage />} />
+          <Route path="/signup"        element={<SignupPage />} />
+          <Route path="/auth/callback" element={<OAuthCallbackPage />} />
           <Route path="/*"      element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
         </Routes>
       </AuthProvider>
