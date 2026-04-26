@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { createUserWithEmailAndPassword } from 'firebase/auth'
-import { auth } from './firebase'
+import { useAuth } from './AuthContext'
 
 export default function SignupPage() {
   const navigate = useNavigate()
+  const { signupFn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -17,10 +17,10 @@ export default function SignupPage() {
     setError('')
     setLoading(true)
     try {
-      await createUserWithEmailAndPassword(auth, email, password)
+      await signupFn(email, password)
       navigate('/')
     } catch (e) {
-      setError(e.message?.replace('Firebase: ', '') || 'Sign up failed')
+      setError(e.response?.data?.detail || e.message || 'Sign up failed')
     } finally {
       setLoading(false)
     }

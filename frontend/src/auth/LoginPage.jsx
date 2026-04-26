@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth'
-import { auth, githubProvider, googleProvider } from './firebase'
+import { useAuth } from './AuthContext'
 
 const IconGitHub = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -20,6 +19,7 @@ const IconGoogle = () => (
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const { loginFn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -32,7 +32,7 @@ export default function LoginPage() {
       await fn()
       navigate('/')
     } catch (e) {
-      setError(e.message?.replace('Firebase: ', '') || 'Authentication failed')
+      setError(e.response?.data?.detail || e.message || 'Authentication failed')
     } finally {
       setLoading(false)
     }
@@ -46,7 +46,7 @@ export default function LoginPage() {
 
         <button
           className="auth-btn auth-btn-github"
-          onClick={() => handle(() => signInWithPopup(auth, githubProvider))}
+          onClick={() => { window.location.href = '/api/auth/github' }}
           disabled={loading}
         >
           <IconGitHub /> Continue with GitHub
@@ -54,7 +54,7 @@ export default function LoginPage() {
 
         <button
           className="auth-btn auth-btn-google"
-          onClick={() => handle(() => signInWithPopup(auth, googleProvider))}
+          onClick={() => { window.location.href = '/api/auth/google' }}
           disabled={loading}
         >
           <IconGoogle /> Continue with Google
@@ -62,7 +62,7 @@ export default function LoginPage() {
 
         <div className="auth-divider"><span>or</span></div>
 
-        <form onSubmit={(e) => { e.preventDefault(); handle(() => signInWithEmailAndPassword(auth, email, password)) }}>
+        <form onSubmit={(e) => { e.preventDefault(); handle(() => loginFn(email, password)) }}>
           <input
             className="auth-input"
             type="email"
