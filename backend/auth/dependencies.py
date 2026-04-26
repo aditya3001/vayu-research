@@ -1,12 +1,12 @@
 import logging
 from fastapi import Header, HTTPException
-from firebase_admin import exceptions as fb_exceptions
-from firebase_admin.auth import ExpiredIdTokenError, RevokedIdTokenError
-from .firebase import verify_id_token
+from auth.jwt_utils import decode_token, TokenExpiredError, TokenInvalidError
 
 logger = logging.getLogger(__name__)
 
+
 async def get_current_user(authorization: str = Header(...)) -> str:
+    """Extract and validate Bearer JWT. Returns user_id as a string."""
     if not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=401,
@@ -21,21 +21,23 @@ async def get_current_user(authorization: str = Header(...)) -> str:
             headers={"WWW-Authenticate": "Bearer"},
         )
     try:
-        decoded = verify_id_token(token)
-        return decoded["uid"]
-    except (ExpiredIdTokenError, RevokedIdTokenError):
+        payload = decode_token(token)
+    except TokenExpiredError:
         raise HTTPException(
             status_code=401,
-            detail="Invalid or expired token",
+            detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except fb_exceptions.FirebaseError as e:
-        logger.error("Firebase infrastructure error during token verification: %s", e)
-        raise HTTPException(status_code=503, detail="Authentication service unavailable")
-    except Exception as e:
-        logger.error("Unexpected error during token verification: %s", e)
+    except TokenInvalidError:
         raise HTTPException(
             status_code=401,
-            detail="Invalid or expired token",
+            detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token type",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return str(payload["sub"])

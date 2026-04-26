@@ -3,10 +3,6 @@ import secrets
 import time
 from urllib.parse import urlencode
 
-GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID", "")
-GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET", "")
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 
 # In-memory stores — single-process. Fine for SQLite/single-instance deployments.
@@ -53,7 +49,7 @@ def verify_oauth_state(state: str) -> bool:
 def build_github_auth_url(callback_url: str) -> tuple[str, str]:
     state = store_oauth_state()
     params = urlencode({
-        "client_id": GITHUB_CLIENT_ID,
+        "client_id": os.environ.get("GITHUB_CLIENT_ID", ""),
         "redirect_uri": callback_url,
         "scope": "user:email",
         "state": state,
@@ -64,7 +60,7 @@ def build_github_auth_url(callback_url: str) -> tuple[str, str]:
 def build_google_auth_url(callback_url: str) -> tuple[str, str]:
     state = store_oauth_state()
     params = urlencode({
-        "client_id": GOOGLE_CLIENT_ID,
+        "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
         "redirect_uri": callback_url,
         "response_type": "code",
         "scope": "openid email",
@@ -83,8 +79,8 @@ def exchange_github_code(code: str, callback_url: str) -> dict:
     token_resp = httpx.post(
         "https://github.com/login/oauth/access_token",
         json={
-            "client_id": GITHUB_CLIENT_ID,
-            "client_secret": GITHUB_CLIENT_SECRET,
+            "client_id": os.environ.get("GITHUB_CLIENT_ID", ""),
+            "client_secret": os.environ.get("GITHUB_CLIENT_SECRET", ""),
             "code": code,
             "redirect_uri": callback_url,
         },
@@ -127,8 +123,8 @@ def exchange_google_code(code: str, callback_url: str) -> dict:
         "https://oauth2.googleapis.com/token",
         data={
             "code": code,
-            "client_id": GOOGLE_CLIENT_ID,
-            "client_secret": GOOGLE_CLIENT_SECRET,
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
+            "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
             "redirect_uri": callback_url,
             "grant_type": "authorization_code",
         },

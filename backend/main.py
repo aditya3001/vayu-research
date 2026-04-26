@@ -36,6 +36,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Vayu Research", lifespan=lifespan)
 
 from routers import prompts, run, history, schedules, settings
+from auth import router as auth_router
+app.include_router(auth_router, prefix="/api/auth")
 app.include_router(prompts.router, prefix="/api")
 app.include_router(run.router, prefix="/api")
 app.include_router(history.router, prefix="/api")

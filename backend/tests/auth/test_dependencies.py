@@ -1,75 +1,62 @@
+import os
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-testing-only")
+
 import pytest
-from unittest.mock import patch
 from fastapi import HTTPException
+from auth.jwt_utils import create_access_token, create_refresh_token
+from auth.dependencies import get_current_user
 
 
 @pytest.mark.asyncio
-async def test_valid_token_returns_uid():
-    with patch("auth.dependencies.verify_id_token", return_value={"uid": "user-abc"}):
-        from auth.dependencies import get_current_user
-        result = await get_current_user("Bearer valid_token_here")
-        assert result == "user-abc"
+async def test_valid_token_returns_user_id():
+    token = create_access_token(user_id=42)
+    result = await get_current_user(authorization=f"Bearer {token}")
+    assert result == "42"
 
 
 @pytest.mark.asyncio
-async def test_invalid_token_raises_401():
-    with patch("auth.dependencies.verify_id_token", side_effect=Exception("token invalid")):
-        from auth.dependencies import get_current_user
-        with pytest.raises(HTTPException) as exc:
-            await get_current_user("Bearer bad_token")
-        assert exc.value.status_code == 401
+async def test_expired_token_raises_401():
+    token = create_access_token(user_id=1, expires_minutes=-1)
+    with pytest.raises(HTTPException) as exc:
+        await get_current_user(authorization=f"Bearer {token}")
+    assert exc.value.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_missing_bearer_raises_401():
-    with patch("auth.dependencies.verify_id_token"):
-        from auth.dependencies import get_current_user
-        with pytest.raises(HTTPException) as exc:
-            await get_current_user("not-a-bearer-token")
-        assert exc.value.status_code == 401
+async def test_tampered_token_raises_401():
+    token = create_access_token(user_id=1)
+    tampered = token[:-5] + "XXXXX"
+    with pytest.raises(HTTPException) as exc:
+        await get_current_user(authorization=f"Bearer {tampered}")
+    assert exc.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_missing_bearer_prefix_raises_401():
+    with pytest.raises(HTTPException) as exc:
+        await get_current_user(authorization="Token somevalue")
+    assert exc.value.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_empty_token_raises_401():
-    with patch("auth.dependencies.verify_id_token"):
-        from auth.dependencies import get_current_user
-        with pytest.raises(HTTPException) as exc:
-            await get_current_user("Bearer ")
-        assert exc.value.status_code == 401
-        assert "Missing token" in exc.value.detail
-
-
-def test_missing_header_raises_422():
-    """FastAPI raises 422 when a required Header is absent."""
-    from fastapi import FastAPI, Depends
-    from fastapi.testclient import TestClient
-    from auth.dependencies import get_current_user
-
-    app = FastAPI()
-
-    @app.get("/test")
-    async def handler(uid: str = Depends(get_current_user)):
-        return {"uid": uid}
-
-    client = TestClient(app)
-    response = client.get("/test")
-    assert response.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_firebase_infra_error_returns_503():
-    from firebase_admin import exceptions as fb_exceptions
-    with patch("auth.dependencies.verify_id_token", side_effect=fb_exceptions.FirebaseError("INTERNAL", "cert fetch failed")):
-        from auth.dependencies import get_current_user
-        with pytest.raises(HTTPException) as exc:
-            await get_current_user("Bearer sometoken")
-        assert exc.value.status_code == 503
+    with pytest.raises(HTTPException) as exc:
+        await get_current_user(authorization="Bearer ")
+    assert exc.value.status_code == 401
+    assert "Missing token" in exc.value.detail
 
 
 @pytest.mark.asyncio
 async def test_401_includes_www_authenticate_header():
-    with patch("auth.dependencies.verify_id_token", side_effect=Exception("bad")):
-        from auth.dependencies import get_current_user
-        with pytest.raises(HTTPException) as exc:
-            await get_current_user("Bearer badtoken")
-        assert exc.value.headers.get("WWW-Authenticate") == "Bearer"
+    with pytest.raises(HTTPException) as exc:
+        await get_current_user(authorization="Bearer garbage")
+    assert exc.value.headers.get("WWW-Authenticate") == "Bearer"
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_rejected_as_access():
+    """A refresh token must not be accepted where an access token is expected."""
+    token = create_refresh_token(user_id=1)
+    with pytest.raises(HTTPException) as exc:
+        await get_current_user(authorization=f"Bearer {token}")
+    assert exc.value.status_code == 401
