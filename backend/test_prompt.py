@@ -17,7 +17,26 @@ load_dotenv(override=True)
 from fastapi.testclient import TestClient
 from main import app
 
-client = TestClient(app, raise_server_exceptions=True)
+_base_client = TestClient(app, raise_server_exceptions=True)
+
+# Sign up a test user and get an access token for authenticated requests
+_TEST_EMAIL = "test_prompt_user@example.com"
+_TEST_PASSWORD = "testpassword123"
+
+def _get_auth_client():
+    """Return a TestClient with Authorization header pre-set."""
+    # Try signup first; if already exists, login instead
+    r = _base_client.post("/api/auth/signup", json={"email": _TEST_EMAIL, "password": _TEST_PASSWORD})
+    if r.status_code not in (200, 400):
+        raise RuntimeError(f"Auth setup failed: {r.status_code} {r.text}")
+    if r.status_code == 400:
+        r = _base_client.post("/api/auth/login", json={"email": _TEST_EMAIL, "password": _TEST_PASSWORD})
+        if r.status_code != 200:
+            raise RuntimeError(f"Auth login failed: {r.status_code} {r.text}")
+    token = r.json()["access_token"]
+    return TestClient(app, raise_server_exceptions=True, headers={"Authorization": f"Bearer {token}"})
+
+client = _get_auth_client()
 
 # ── Parse custom flags before unittest consumes argv ──────────────────────────
 _override_model = None
@@ -156,10 +175,10 @@ class CustomPromptTest(unittest.TestCase):
         )
 
     def test_02_empty_text_rejected(self):
-        """Empty text returns 400."""
+        """Empty text returns 422 (Pydantic validation) or 400."""
         r = client.post("/api/run/raw", json={"text": "   "})
-        self.assertEqual(r.status_code, 400)
-        print(f"\n  empty text correctly rejected: {r.json()['detail']}")
+        self.assertIn(r.status_code, (400, 422), f"Expected 400 or 422, got {r.status_code}")
+        print(f"\n  empty text correctly rejected with {r.status_code}: {r.json()['detail']}")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
