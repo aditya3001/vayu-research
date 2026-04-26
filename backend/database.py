@@ -87,3 +87,18 @@ def run_migrations():
             conn.commit()
         except Exception:
             pass  # constraint already updated or not supported
+
+        # ── users table ───────────────────────────────────────────────────────
+        try:
+            conn.execute(text(
+                "CREATE TABLE IF NOT EXISTS users ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "email VARCHAR NOT NULL UNIQUE, "
+                "provider VARCHAR NOT NULL, "
+                "hashed_password VARCHAR, "
+                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+                ")"
+            ))
+            conn.commit()
+        except Exception:
+            pass  # already exists
