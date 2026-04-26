@@ -1,5 +1,7 @@
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError
 from database import Base
 
 
@@ -23,8 +25,6 @@ def test_user_table_created():
 
 def test_user_email_is_unique():
     from auth.models import User
-    import pytest
-    from sqlalchemy.exc import IntegrityError
     engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
     Base.metadata.create_all(bind=engine)
     Session = sessionmaker(bind=engine)
@@ -34,4 +34,5 @@ def test_user_email_is_unique():
     db.add(User(email="dup@example.com", provider="github"))
     with pytest.raises(IntegrityError):
         db.commit()
+    db.rollback()
     db.close()
