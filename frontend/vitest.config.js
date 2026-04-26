@@ -1,10 +1,16 @@
 import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+  plugins: [react()],
   test: {
+    // api.test.js uses node; AuthContext.test.jsx needs jsdom.
+    // We split them via workspace-style per-file env overrides using
+    // a single pool but let each file declare its own environment via
+    // the @vitest-environment docblock.
     environment: 'node',
     globals: true,
-    include: ['src/api.test.js'],
+    include: ['src/api.test.js', 'src/auth/AuthContext.test.jsx'],
     pool: 'forks',
     poolOptions: {
       forks: {
