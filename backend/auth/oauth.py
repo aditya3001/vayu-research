@@ -11,7 +11,7 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 
 # In-memory stores — single-process. Fine for SQLite/single-instance deployments.
 _pending_codes: dict[str, dict] = {}
-_pending_states: set[str] = set()
+_pending_states: dict[str, float] = {}  # state -> expires_at
 
 
 # ── One-time exchange codes (post-OAuth → frontend token exchange) ─────────────
@@ -34,16 +34,16 @@ def redeem_exchange_code(code: str) -> int | None:
 # ── CSRF state tokens ─────────────────────────────────────────────────────────
 
 def store_oauth_state() -> str:
-    """Generate and store a single-use CSRF state token."""
+    """Generate and store a single-use CSRF state token (10-minute TTL)."""
     state = secrets.token_urlsafe(24)
-    _pending_states.add(state)
+    _pending_states[state] = time.time() + 600  # 10 minutes
     return state
 
 
 def verify_oauth_state(state: str) -> bool:
-    """Return True and consume the state if it exists, else False."""
-    if state in _pending_states:
-        _pending_states.discard(state)
+    """Return True and consume the state if it exists and has not expired, else False."""
+    expires = _pending_states.pop(state, None)
+    if expires is not None and expires > time.time():
         return True
     return False
 
@@ -143,4 +143,9 @@ def exchange_google_code(code: str, callback_url: str) -> dict:
     parts = id_token.split(".")
     padded = parts[1] + "=" * (4 - len(parts[1]) % 4)
     claims = _json.loads(base64.urlsafe_b64decode(padded))
-    return {"email": claims["email"].lower()}
+    if not claims.get("email_verified"):
+        raise ValueError("Google account email is not verified")
+    email = claims.get("email")
+    if not email:
+        raise ValueError("Google account did not return an email")
+    return {"email": email.lower()}
