@@ -13,3 +13,7 @@ backend/firebase-service-account.json
 # Node
 frontend/node_modules/
 frontend/dist/
+
+# Editor artifacts
+.obsidian/
+docs/superpowers/.obsidian/

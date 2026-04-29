@@ -287,6 +287,78 @@ Priority:
 
 ---
 
+## 5. Authentication Flow (Firebase)
+
+### Frontend → Backend sequence
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant R as React App
+    participant F as Firebase Auth
+    participant A as Axios Interceptor
+    participant B as FastAPI Backend
+    participant FA as Firebase Admin SDK
+    participant DB as Database
+
+    Note over R: App loads
+    R->>R: onAuthStateChanged (undefined → loading)
+    R->>F: Check persisted session
+    F-->>R: user = null (unauthenticated)
+    R->>R: ProtectedRoute → redirect /login
+
+    Note over U,F: Login Flow
+    U->>R: Click GitHub / Google / Submit email+password
+    R->>F: signInWithPopup() or signInWithEmailAndPassword()
+    F-->>R: Firebase User object
+    R->>R: onAuthStateChanged → setUser(user)
+    R->>R: ProtectedRoute → render AppShell
+
+    Note over R,DB: Authenticated API Call
+    R->>A: API request (e.g. GET /api/history)
+    A->>F: auth.currentUser.getIdToken()
+    F-->>A: ID Token (JWT, ~1hr expiry)
+    A->>B: Request + Authorization: Bearer <token>
+    B->>B: get_current_user dependency
+    B->>FA: verify_id_token(token)
+    FA->>F: Verify signature + expiry
+    F-->>FA: Decoded token
+    FA-->>B: { uid: "abc123" }
+    B->>DB: Query filtered by user_id = "abc123"
+    DB-->>B: User's data
+    B-->>R: Response
+
+    Note over R,B: Token Expired
+    A->>F: auth.currentUser.getIdToken()
+    F->>F: Auto-refresh token (silent)
+    F-->>A: New ID Token
+    A->>B: Request + new token
+```
+
+**Key design decisions:**
+
+- `user === undefined` = loading, `user === null` = unauthenticated — prevents flash of unauthenticated content in `ProtectedRoute`
+- Firebase handles token refresh silently — `getIdToken()` auto-refreshes if within expiry window
+- Axios interceptor attaches Bearer token to every request — auth is transparent to all API calls
+- Backend never stores tokens — verifies on each request via Firebase Admin SDK
+- `user_id` (Firebase UID) scopes all DB queries — `WHERE user_id = ?` on every history, schedule, and setting query
+
+**Relevant files:**
+
+| Layer | File | Responsibility |
+|---|---|---|
+| Frontend | `src/auth/firebase.js` | Firebase app init, auth providers |
+| Frontend | `src/auth/AuthContext.jsx` | `onAuthStateChanged` → `useAuth()` hook |
+| Frontend | `src/auth/ProtectedRoute.jsx` | Redirect unauthenticated users |
+| Frontend | `src/auth/LoginPage.jsx` | GitHub / Google / email login UI |
+| Frontend | `src/auth/SignupPage.jsx` | Email sign-up UI |
+| Frontend | `src/api.js` | Axios interceptor attaching Bearer token |
+| Backend | `backend/auth/firebase.py` | Thread-safe Firebase Admin SDK init |
+| Backend | `backend/auth/dependencies.py` | `get_current_user` FastAPI dependency |
+| Backend | `backend/routers/*.py` | All routes use `Depends(get_current_user)` |
+
+---
+
 ## API Endpoints
 
 | Method | Endpoint | Description |

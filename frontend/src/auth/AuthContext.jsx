@@ -5,42 +5,8 @@ import {
   signup as apiSignup,
   exchangeCode as apiExchangeCode,
   refreshToken as apiRefreshToken,
-  getAccessToken,
+  getMe,
 } from '../api'
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Decode the payload of a JWT without verifying the signature.
- * Returns the parsed payload object, or null if decoding fails.
- */
-function decodeJwtPayload(token) {
-  try {
-    const parts = token.split('.')
-    if (parts.length !== 3) return null
-    // Base64url → Base64 → JSON
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
-    const json = atob(base64)
-    return JSON.parse(json)
-  } catch {
-    return null
-  }
-}
-
-/**
- * Build the user object from the currently stored access token.
- * Returns { id } where id is the numeric user id from the "sub" claim.
- * Returns null if no token is stored or decoding fails.
- */
-function buildUserFromStoredToken() {
-  const token = getAccessToken()
-  if (!token) return null
-  const payload = decodeJwtPayload(token)
-  if (!payload || !payload.sub) return null
-  return { id: payload.sub }
-}
 
 // ---------------------------------------------------------------------------
 // Context
@@ -60,12 +26,9 @@ export function AuthProvider({ children }) {
     let cancelled = false
 
     apiRefreshToken()
-      .then(() => {
-        if (!cancelled) setUser(buildUserFromStoredToken())
-      })
-      .catch(() => {
-        if (!cancelled) setUser(null)
-      })
+      .then(() => getMe())
+      .then((u) => { if (!cancelled) setUser(u) })
+      .catch(() => { if (!cancelled) setUser(null) })
 
     return () => { cancelled = true }
   }, [])
@@ -74,12 +37,12 @@ export function AuthProvider({ children }) {
 
   const signupFn = async (email, password) => {
     await apiSignup(email, password)
-    setUser(buildUserFromStoredToken())
+    setUser(await getMe())
   }
 
   const loginFn = async (email, password) => {
     await apiLogin(email, password)
-    setUser(buildUserFromStoredToken())
+    setUser(await getMe())
   }
 
   const logoutFn = async () => {
@@ -89,7 +52,7 @@ export function AuthProvider({ children }) {
 
   const handleOAuthCode = async (code) => {
     await apiExchangeCode(code)
-    setUser(buildUserFromStoredToken())
+    setUser(await getMe())
   }
 
   // Keep signOut as an alias so any existing consumers using the old name still work

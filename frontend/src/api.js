@@ -88,6 +88,8 @@ export const refreshToken = async () => {
   return data.access_token
 }
 
+export const getMe = () => api.get('/api/auth/me').then(r => r.data)
+
 // ---------------------------------------------------------------------------
 // Non-auth API helpers (unchanged)
 // ---------------------------------------------------------------------------

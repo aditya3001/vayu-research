@@ -14,6 +14,7 @@ from auth.jwt_utils import (
     TokenExpiredError,
     TokenInvalidError,
 )
+from auth.dependencies import get_current_user
 from auth.password import hash_password, verify_password
 from auth.oauth import (
     build_github_auth_url,
@@ -176,6 +177,16 @@ def google_callback(code: str, state: str, db: Session = Depends(get_db)):
     user = _get_or_create_oauth_user(db, email=user_info["email"], provider="google")
     exchange_code = create_exchange_code(user.id)
     return RedirectResponse(url=f"{FRONTEND_URL}/auth/callback?code={exchange_code}")
+
+
+# ── Current user ─────────────────────────────────────────────────────────────
+
+@router.get("/me")
+def me(user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"id": user.id, "email": user.email, "provider": user.provider}
 
 
 # ── One-time code exchange ────────────────────────────────────────────────────

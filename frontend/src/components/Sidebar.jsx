@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../auth'
 
 /* ── SVG Icons ───────────────────────────────────────────────────── */
 const IconGrid = () => (
@@ -57,6 +58,13 @@ const IconChevronRight = () => (
   </svg>
 )
 
+const IconLogOut = () => (
+  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
+    <path d="M7.5 10h8.75M13.75 7.5L16.25 10l-2.5 2.5" />
+    <path d="M12.5 3.75H4.375A1.875 1.875 0 0 0 2.5 5.625v8.75a1.875 1.875 0 0 0 1.875 1.875H12.5" />
+  </svg>
+)
+
 /* ── Nav items ───────────────────────────────────────────────────── */
 const NAV_ITEMS = [
   { to: '/',          label: 'Library',   Icon: IconGrid,     end: true },
@@ -72,6 +80,13 @@ export default function Sidebar() {
   const [theme, setTheme] = useState(
     () => localStorage.getItem('vayu-theme') || 'dark'
   )
+  const { user, logoutFn } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await logoutFn()
+    navigate('/login')
+  }
 
   useEffect(() => {
     localStorage.setItem('vayu-sidebar', collapsed ? 'collapsed' : 'expanded')
@@ -131,6 +146,25 @@ export default function Sidebar() {
           </span>
           <span className="sidebar-label">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
         </button>
+
+        {user && (
+          <>
+            <div className="sidebar-user" title={user.email}>
+              <span className="sidebar-user-avatar">
+                {user.email?.[0]?.toUpperCase() ?? '?'}
+              </span>
+              <span className="sidebar-label sidebar-user-email">{user.email}</span>
+            </div>
+            <button
+              className="sidebar-link sidebar-btn"
+              onClick={handleLogout}
+              title={collapsed ? 'Sign out' : undefined}
+            >
+              <span className="sidebar-icon"><IconLogOut /></span>
+              <span className="sidebar-label">Sign out</span>
+            </button>
+          </>
+        )}
 
         <button
           className="sidebar-toggle"
